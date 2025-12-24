@@ -1,4 +1,4 @@
-# 🤟 Project Unmute
+# Project Unmute
 
 **Real-time ASL (American Sign Language) translation app** that bridges communication between deaf/hard-of-hearing and hearing individuals using Ray-Ban Meta smart glasses.
 
@@ -7,31 +7,31 @@
 ![Meta Glasses](https://img.shields.io/badge/Meta-Ray--Ban%20Glasses-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## ✨ Features
+##  Features
 
-### 🗣️ Speech → ASL Mode
+###  Speech → ASL Mode
 - **Real-time speech recognition** via iPhone/Meta Glasses microphone
 - **Automatic avatar video playback** showing ASL signs for spoken words
 - **Live transcription display** on screen
 
-### 🤟 ASL → Text Mode  
+###  ASL → Text Mode  
 - **Live video streaming** from Ray-Ban Meta glasses camera
 - **Hand gesture detection** using MediaPipe Vision
 - **ASL sign recognition** with sentence building
 - **Text-to-speech output** through Meta Glasses speakers
 
-### 📱 Camera Sources
+###  Camera Sources
 - **Ray-Ban Meta Glasses** - First-person POV for ASL detection
 - **iPhone Front Camera** - For testing and demos
 - **iPhone Back Camera** - Alternative input
 
-## 🎥 Demo
+##  Demo
 
 | Speech → ASL | ASL → Text |
 |:------------:|:----------:|
 | Speak naturally, see ASL avatar | Sign in ASL, see text translation |
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ProjectUnmute/
@@ -60,7 +60,7 @@ ProjectUnmute/
 └── README.md
 ```
 
-## 📋 Requirements
+##  Requirements
 
 | Component | Requirement |
 |-----------|-------------|
@@ -71,7 +71,7 @@ ProjectUnmute/
 | **Glasses** | Ray-Ban Meta (Gen 2 recommended) |
 | **CocoaPods** | 1.14+ |
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Clone Repository
 ```bash
@@ -108,7 +108,7 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 - Build and run (`Cmd+R`)
 - Pair Meta Glasses via Meta AI app
 
-## 🔧 Configuration
+##  Configuration
 
 ### Info.plist Keys
 ```xml
@@ -132,7 +132,7 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 <string>Bluetooth to connect Meta Glasses</string>
 ```
 
-## 🕶️ Meta Glasses Setup
+##  Meta Glasses Setup
 
 ### First-Time Pairing
 1. Install **Meta AI** app on iPhone
@@ -151,7 +151,7 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 | "Registration failed" | Update Meta AI app to latest version |
 | Opens Messenger instead | Fixed in v1.0 - use latest code |
 
-## 🤖 Hand Gesture Recognition
+##  Hand Gesture Recognition
 
 ### Supported Gestures (MediaPipe)
 | Gesture | Icon | Description |
@@ -170,7 +170,7 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 | `POINTING` | 2 sec | Speaks "Hello" |
 | `THANK_YOU` | 2 sec | Speaks "Thank you" |
 
-## 📹 Avatar Video System
+##  Avatar Video System
 
 ### Adding New Signs
 1. Create video of ASL sign (MP4/MOV/M4V)
@@ -187,14 +187,14 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 | "Help" | `help.mp4` |
 | "Yes" / "No" | `yes.mp4` / `no.mp4` |
 
-## 🧪 Demo Mode
+##  Demo Mode
 
 For testing without Meta Glasses:
 1. Switch to **iPhone Front Camera**
 2. Use **Demo Mode** buttons to simulate ASL signs
 3. Test sentence building and speech output
 
-## 📦 Dependencies
+##  Dependencies
 
 | Package | Version | Purpose |
 |---------|---------|---------|
@@ -203,7 +203,7 @@ For testing without Meta Glasses:
 | Apple Speech Framework | Built-in | Speech recognition |
 | AVFoundation | Built-in | Video/audio playback |
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - [x] Meta Glasses video streaming
 - [x] Speech → ASL avatar translation  
@@ -215,7 +215,7 @@ For testing without Meta Glasses:
 - [ ] Offline mode support
 - [ ] Apple Watch companion app
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
@@ -223,22 +223,22 @@ For testing without Meta Glasses:
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open Pull Request
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - [Meta Wearables SDK](https://wearables.developer.meta.com/) for glasses integration
 - [Google MediaPipe](https://developers.google.com/mediapipe) for hand tracking
 - ASL community for inspiration and guidance
 
-## 📧 Contact
+##  Contact
 
-**Ali Zaranwala** - [@azaranwala](https://github.com/azaranwala)
+**Al Aqmar Zaranwala** - [@azaranwala](https://github.com/azaranwala)
 
 Project Link: [https://github.com/azaranwala/ProjectUnmute](https://github.com/azaranwala/ProjectUnmute)
 
 ---
 
-<p align="center">Made with ❤️ for accessibility</p>
+<p align="center">Made for accessibility</p>
