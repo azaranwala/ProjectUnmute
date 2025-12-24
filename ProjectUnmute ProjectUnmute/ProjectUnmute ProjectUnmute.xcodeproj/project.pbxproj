@@ -1,0 +1,447 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		764B8617FD386A38D44012C5 /* Pods_ProjectUnmute_ProjectUnmute.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D2758C2CD30E6A33BF332D68 /* Pods_ProjectUnmute_ProjectUnmute.framework */; };
+		F974178E2EF9C3DE00996754 /* MWDATCamera in Frameworks */ = {isa = PBXBuildFile; productRef = F974178D2EF9C3DE00996754 /* MWDATCamera */; };
+		F97417902EF9C3DE00996754 /* MWDATCore in Frameworks */ = {isa = PBXBuildFile; productRef = F974178F2EF9C3DE00996754 /* MWDATCore */; };
+		F97417922EF9C3DE00996754 /* MWDATMockDevice in Frameworks */ = {isa = PBXBuildFile; productRef = F97417912EF9C3DE00996754 /* MWDATMockDevice */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2A864D173DC50B6882204D6D /* Pods-ProjectUnmute ProjectUnmute.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ProjectUnmute ProjectUnmute.debug.xcconfig"; path = "Target Support Files/Pods-ProjectUnmute ProjectUnmute/Pods-ProjectUnmute ProjectUnmute.debug.xcconfig"; sourceTree = "<group>"; };
+		8CDCCFE9824E346BBF0A5355 /* Pods-ProjectUnmute ProjectUnmute.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ProjectUnmute ProjectUnmute.release.xcconfig"; path = "Target Support Files/Pods-ProjectUnmute ProjectUnmute/Pods-ProjectUnmute ProjectUnmute.release.xcconfig"; sourceTree = "<group>"; };
+		D2758C2CD30E6A33BF332D68 /* Pods_ProjectUnmute_ProjectUnmute.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ProjectUnmute_ProjectUnmute.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F937564A2EF727F200D467D3 /* ProjectUnmute ProjectUnmute.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ProjectUnmute ProjectUnmute.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F937573E2EF72B0900D467D3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F937564C2EF727F200D467D3 /* ProjectUnmute ProjectUnmute */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = "ProjectUnmute ProjectUnmute";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F93756472EF727F200D467D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F97417902EF9C3DE00996754 /* MWDATCore in Frameworks */,
+				F97417922EF9C3DE00996754 /* MWDATMockDevice in Frameworks */,
+				F974178E2EF9C3DE00996754 /* MWDATCamera in Frameworks */,
+				764B8617FD386A38D44012C5 /* Pods_ProjectUnmute_ProjectUnmute.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		001660F6B55BF6CC06C94C81 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				2A864D173DC50B6882204D6D /* Pods-ProjectUnmute ProjectUnmute.debug.xcconfig */,
+				8CDCCFE9824E346BBF0A5355 /* Pods-ProjectUnmute ProjectUnmute.release.xcconfig */,
+			);
+			name = Pods;
+			path = ../Pods;
+			sourceTree = "<group>";
+		};
+		BB429B9A4CB8DE0B79A2500F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D2758C2CD30E6A33BF332D68 /* Pods_ProjectUnmute_ProjectUnmute.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F93756412EF727F200D467D3 = {
+			isa = PBXGroup;
+			children = (
+				F937573E2EF72B0900D467D3 /* Info.plist */,
+				F937564C2EF727F200D467D3 /* ProjectUnmute ProjectUnmute */,
+				F937564B2EF727F200D467D3 /* Products */,
+				001660F6B55BF6CC06C94C81 /* Pods */,
+				BB429B9A4CB8DE0B79A2500F /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		F937564B2EF727F200D467D3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F937564A2EF727F200D467D3 /* ProjectUnmute ProjectUnmute.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F93756492EF727F200D467D3 /* ProjectUnmute ProjectUnmute */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F93756552EF727F300D467D3 /* Build configuration list for PBXNativeTarget "ProjectUnmute ProjectUnmute" */;
+			buildPhases = (
+				BF749416A64A9764D498CADF /* [CP] Check Pods Manifest.lock */,
+				F93756462EF727F200D467D3 /* Sources */,
+				F93756472EF727F200D467D3 /* Frameworks */,
+				F93756482EF727F200D467D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F937564C2EF727F200D467D3 /* ProjectUnmute ProjectUnmute */,
+			);
+			name = "ProjectUnmute ProjectUnmute";
+			productName = "ProjectUnmute ProjectUnmute";
+			productReference = F937564A2EF727F200D467D3 /* ProjectUnmute ProjectUnmute.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F93756422EF727F200D467D3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					F93756492EF727F200D467D3 = {
+						CreatedOnToolsVersion = 16.4;
+						LastSwiftMigration = 1640;
+					};
+				};
+			};
+			buildConfigurationList = F93756452EF727F200D467D3 /* Build configuration list for PBXProject "ProjectUnmute ProjectUnmute" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F93756412EF727F200D467D3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F974178C2EF9C3DE00996754 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F937564B2EF727F200D467D3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F93756492EF727F200D467D3 /* ProjectUnmute ProjectUnmute */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F93756482EF727F200D467D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		BF749416A64A9764D498CADF /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-ProjectUnmute ProjectUnmute-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F93756462EF727F200D467D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F93756532EF727F300D467D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = GGVPL4U8S6;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F93756542EF727F300D467D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = GGVPL4U8S6;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F93756562EF727F300D467D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2A864D173DC50B6882204D6D /* Pods-ProjectUnmute ProjectUnmute.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GGVPL4U8S6;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth is required to connect to Meta wearable devices.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is required for hand tracking and ASL sign detection.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is required for speech recognition to convert your speech to ASL avatar videos.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition is used to convert your speech to text and display corresponding ASL avatar videos.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ProjectUnmute.ProjectUnmute-ProjectUnmute";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "ProjectUnmute ProjectUnmute/ProjectUnmute ProjectUnmute-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F93756572EF727F300D467D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8CDCCFE9824E346BBF0A5355 /* Pods-ProjectUnmute ProjectUnmute.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GGVPL4U8S6;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth is required to connect to Meta wearable devices.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is required for hand tracking and ASL sign detection.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is required for speech recognition to convert your speech to ASL avatar videos.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition is used to convert your speech to text and display corresponding ASL avatar videos.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ProjectUnmute.ProjectUnmute-ProjectUnmute";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "ProjectUnmute ProjectUnmute/ProjectUnmute ProjectUnmute-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F93756452EF727F200D467D3 /* Build configuration list for PBXProject "ProjectUnmute ProjectUnmute" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F93756532EF727F300D467D3 /* Debug */,
+				F93756542EF727F300D467D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F93756552EF727F300D467D3 /* Build configuration list for PBXNativeTarget "ProjectUnmute ProjectUnmute" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F93756562EF727F300D467D3 /* Debug */,
+				F93756572EF727F300D467D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F974178C2EF9C3DE00996754 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/meta-wearables-dat-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F974178D2EF9C3DE00996754 /* MWDATCamera */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F974178C2EF9C3DE00996754 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCamera;
+		};
+		F974178F2EF9C3DE00996754 /* MWDATCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F974178C2EF9C3DE00996754 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCore;
+		};
+		F97417912EF9C3DE00996754 /* MWDATMockDevice */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F974178C2EF9C3DE00996754 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATMockDevice;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = F93756422EF727F200D467D3 /* Project object */;
+}
