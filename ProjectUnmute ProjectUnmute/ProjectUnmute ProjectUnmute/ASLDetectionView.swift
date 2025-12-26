@@ -80,6 +80,18 @@ struct ASLDetectionView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             
+            // Auto-speak toggle
+            HStack {
+                Image(systemName: detector.autoSpeakEnabled ? "speaker.wave.3.fill" : "speaker.slash.fill")
+                    .foregroundColor(detector.autoSpeakEnabled ? .green : .gray)
+                Toggle("Auto-speak signs", isOn: $detector.autoSpeakEnabled)
+                    .font(.caption)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
+            
             // Action buttons
             HStack(spacing: 12) {
                 // Add space
@@ -89,7 +101,7 @@ struct ASLDetectionView: View {
                 }
                 .buttonStyle(.bordered)
                 
-                // Speak
+                // Speak sentence
                 Button(action: { detector.speakSentence() }) {
                     Label("Speak", systemImage: "speaker.wave.2.fill")
                         .font(.caption)

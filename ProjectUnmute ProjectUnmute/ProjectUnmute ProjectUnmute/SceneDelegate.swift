@@ -57,10 +57,12 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 let handled = try await Wearables.shared.handleUrl(url)
                 print(handled ? "✅ Meta SDK handled URL" : "⚠️ Meta SDK did not handle URL")
                 
-                if handled {
-                    // Restart streaming after successful registration
-                    print("🔄 Registration successful, restarting streaming...")
+                // Don't restart if already streaming to avoid loop
+                if handled && MetaGlassesCameraManager.shared.state != .streaming {
+                    print("🔄 Permission granted, starting streaming...")
                     await MetaGlassesCameraManager.shared.startStreaming()
+                } else if handled {
+                    print("ℹ️ Already streaming, skipping restart")
                 }
             } catch {
                 print("❌ Error handling URL: \(error)")

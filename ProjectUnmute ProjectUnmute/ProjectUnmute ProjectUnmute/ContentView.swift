@@ -29,16 +29,22 @@ struct ContentView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                switch cameraManager.state {
-                case .disconnected:
-                    disconnectedView
-                case .connecting:
-                    ProgressView("Connecting to glasses...")
-                        .foregroundColor(.white)
-                case .streaming:
-                    streamingView
-                case .error(let message):
-                    errorView(message: message)
+                // For ASL→Text mode, always show the full view with controls
+                if communicationMode == .aslToText {
+                    aslToTextView
+                } else {
+                    // Speech→ASL mode uses state-based views
+                    switch cameraManager.state {
+                    case .disconnected:
+                        disconnectedView
+                    case .connecting:
+                        ProgressView("Connecting to glasses...")
+                            .foregroundColor(.white)
+                    case .streaming:
+                        streamingView
+                    case .error(let message):
+                        errorView(message: message)
+                    }
                 }
             }
             .navigationTitle("Project Unmute")
@@ -242,6 +248,21 @@ struct ContentView: View {
             }
             .padding(.horizontal)
             
+            // Text-to-Speech toggle
+            Toggle(isOn: $gestureManager.speakGesturesEnabled) {
+                HStack {
+                    Image(systemName: gestureManager.speakGesturesEnabled ? "speaker.wave.3.fill" : "speaker.slash.fill")
+                        .foregroundColor(gestureManager.speakGesturesEnabled ? .green : .gray)
+                    Text("Speak Gestures")
+                        .font(.subheadline)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
+            .padding(.horizontal)
+            
             // Detected gestures display
             GestureResultsView(
                 gestures: gestureManager.detectedGestures,
@@ -323,8 +344,14 @@ struct ContentView: View {
                         VStack(spacing: 8) {
                             MetaGlassesStatusView()
                             
-                            // Big Authorize button if no video
-                            if cameraManager.currentFrame == nil {
+                            // Show status message
+                            Text(MetaGlassesCameraManager.shared.statusMessage)
+                                .font(.caption)
+                                .foregroundColor(.yellow)
+                                .multilineTextAlignment(.center)
+                            
+                            // Big Authorize button only if not authorized yet
+                            if cameraManager.currentFrame == nil && !MetaGlassesCameraManager.shared.isAuthorized {
                                 Button(action: {
                                     Task {
                                         await MetaGlassesCameraManager.shared.openMetaAIForAuthorization()
@@ -341,29 +368,91 @@ struct ContentView: View {
                                     .background(Color.blue)
                                     .cornerRadius(10)
                                 }
-                                
-                                Text("⚠️ No video - Meta SDK integration pending")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                                    .multilineTextAlignment(.center)
-                                
-                                // Fallback to iPhone camera button
-                                Button(action: {
-                                    cameraManager.switchCamera(to: .iPhoneFront)
-                                }) {
-                                    HStack {
-                                        Image(systemName: "iphone")
-                                        Text("Use iPhone Camera Instead")
-                                    }
-                                    .font(.subheadline)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(10)
-                                    .background(Color.green)
-                                    .cornerRadius(8)
-                                }
-                                .padding(.top, 4)
                             }
+                            
+                            // Show waiting message if authorized but no frames
+                            if cameraManager.currentFrame == nil && MetaGlassesCameraManager.shared.isAuthorized {
+                                VStack(spacing: 8) {
+                                    ProgressView()
+                                        .scaleEffect(1.2)
+                                    Text("Waiting for video from glasses...")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                    Text("👓 Put glasses on & tap temple to wake")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                    
+                                    // Restart button if stuck
+                                    Button(action: {
+                                        Task {
+                                            await MetaGlassesCameraManager.shared.restartStreaming()
+                                        }
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "arrow.clockwise")
+                                            Text("Restart Connection")
+                                        }
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.blue)
+                                        .cornerRadius(8)
+                                    }
+                                    .padding(.top, 4)
+                                }
+                                .padding()
+                            }
+                            
+                            // No video message only if not authorized
+                            if cameraManager.currentFrame == nil && !MetaGlassesCameraManager.shared.isAuthorized {
+                                VStack(spacing: 8) {
+                                    Text("⚠️ Camera permission required")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                    
+                                    // Manual permission button
+                                    Button(action: {
+                                        // Open Meta AI app settings
+                                        if let url = URL(string: "meta-ai://") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "gear")
+                                            Text("Open Meta AI Settings")
+                                        }
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.orange)
+                                        .cornerRadius(8)
+                                    }
+                                    
+                                    Text("Go to Settings → Connected Apps → ProjectUnmute → Enable Camera")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.center)
+                                }
+                            }
+                            
+                            // Fallback to iPhone camera button
+                            Button(action: {
+                                cameraManager.switchCamera(to: .iPhoneFront)
+                            }) {
+                                HStack {
+                                    Image(systemName: "iphone")
+                                    Text("Use iPhone Camera Instead")
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(10)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                            }
+                            .padding(.top, 4)
                         }
                         .padding(.horizontal)
                     }

@@ -29,6 +29,7 @@ final class ASLSignDetector: ObservableObject {
     @Published var confidence: Float = 0
     @Published var isDetecting: Bool = false
     @Published var handVisible: Bool = false  // True when a hand is in frame
+    @Published var autoSpeakEnabled: Bool = true  // Auto-speak confirmed signs
     
     // MARK: - Private Properties
     
@@ -257,8 +258,52 @@ final class ASLSignDetector: ObservableObject {
             
             logger.info("Confirmed sign: \(sign) → Sentence: \(self.detectedSentence)")
             
-            // Haptic feedback would go here on real device
+            // Auto-speak the confirmed sign through Meta Glasses
+            if autoSpeakEnabled {
+                speakSign(sign)
+            }
         }
+    }
+    
+    /// Speak a single sign through Bluetooth (Meta Glasses speakers)
+    private func speakSign(_ sign: String) {
+        // Use the shared SpeechSynthesizer for Bluetooth routing
+        // This ensures audio goes to Meta Glasses if connected
+        
+        // Stop any current speech
+        speechSynthesizer.stopSpeaking(at: .immediate)
+        
+        let utterance = AVSpeechUtterance(string: sign)
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.pitchMultiplier = 1.0
+        utterance.volume = 1.0
+        
+        if let voice = AVSpeechSynthesisVoice(language: "en-US") {
+            utterance.voice = voice
+        }
+        
+        // Configure audio session for Bluetooth before speaking
+        configureAudioForBluetooth()
+        
+        speechSynthesizer.speak(utterance)
+        logger.info("🔊 Auto-speaking sign: \(sign)")
+    }
+    
+    /// Configure audio session to route through Bluetooth (Meta Glasses)
+    private func configureAudioForBluetooth() {
+        #if !targetEnvironment(macCatalyst)
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(
+                .playback,
+                mode: .voicePrompt,
+                options: [.allowBluetooth, .allowBluetoothA2DP]
+            )
+            try audioSession.setActive(true)
+        } catch {
+            logger.error("Failed to configure audio for Bluetooth: \(error.localizedDescription)")
+        }
+        #endif
     }
     
     // MARK: - Sign Detection Logic

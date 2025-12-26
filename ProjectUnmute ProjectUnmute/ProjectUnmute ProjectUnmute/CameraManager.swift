@@ -105,14 +105,22 @@ class DeviceCameraManager: NSObject, ObservableObject {
         guard availableCameras.contains(source) else { return }
         print("🔄 Switching camera to: \(source.rawValue)")
         
-        // Stop current streaming
+        // Stop current streaming (including Meta Glasses)
         stopStreaming()
         metaGlassesSubscriptions.removeAll()
         
-        cameraSource = source
-        
-        // Always start streaming when switching cameras
-        startStreaming()
+        // Stop Meta Glasses streaming properly if we were using it
+        Task {
+            await MetaGlassesCameraManager.shared.stopStreaming()
+            
+            // Brief pause to ensure cleanup
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            
+            await MainActor.run {
+                self.cameraSource = source
+                self.startStreaming()
+            }
+        }
     }
     
     func startStreaming() {
@@ -228,7 +236,9 @@ class DeviceCameraManager: NSObject, ObservableObject {
     
     func stop() {
         stopStreaming()
-        MetaGlassesCameraManager.shared.stopStreaming()
+        Task {
+            await MetaGlassesCameraManager.shared.stopStreaming()
+        }
     }
     
     // MARK: - Meta Glasses Streaming via MWDAT SDK
@@ -236,34 +246,44 @@ class DeviceCameraManager: NSObject, ObservableObject {
     private func setupMetaGlassesStreaming() {
         print("🕶️ Starting Meta Glasses streaming via MWDAT SDK...")
         
+        // IMPORTANT: Clear previewLayer so MWDATVideoView is used instead of CameraPreviewView
+        self.previewLayer = nil
+        
+        let metaManager = MetaGlassesCameraManager.shared
+        
+        // Set up subscriptions FIRST (before starting stream) so we don't miss any frames
+        metaGlassesSubscriptions.removeAll()
+        
+        metaManager.$currentFrame
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] frame in
+                if let frame = frame {
+                    print("📺 Frame forwarded to UI: \(frame.width)x\(frame.height)")
+                }
+                self?.currentFrame = frame
+            }
+            .store(in: &metaGlassesSubscriptions)
+        
+        metaManager.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                print("📺 State forwarded to UI: \(state)")
+                self?.state = state
+            }
+            .store(in: &metaGlassesSubscriptions)
+        
+        metaManager.$frameRate
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] rate in
+                self?.frameRate = rate
+            }
+            .store(in: &metaGlassesSubscriptions)
+        
+        print("📺 Meta Glasses subscriptions set up, previewLayer: \(String(describing: self.previewLayer))")
+        
+        // Now start streaming
         Task { @MainActor in
-            let metaManager = MetaGlassesCameraManager.shared
-            
-            // Start streaming from Meta Glasses
             await metaManager.startStreaming()
-            
-            // Forward frames to our currentFrame property
-            // This uses Combine to observe MetaGlassesCameraManager's frame updates
-            metaManager.$currentFrame
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] frame in
-                    self?.currentFrame = frame
-                }
-                .store(in: &metaGlassesSubscriptions)
-            
-            metaManager.$state
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] state in
-                    self?.state = state
-                }
-                .store(in: &metaGlassesSubscriptions)
-            
-            metaManager.$frameRate
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] rate in
-                    self?.frameRate = rate
-                }
-                .store(in: &metaGlassesSubscriptions)
         }
     }
     

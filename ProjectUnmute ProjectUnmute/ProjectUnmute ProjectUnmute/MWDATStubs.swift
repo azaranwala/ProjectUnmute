@@ -65,6 +65,8 @@ class MetaGlassesCameraManager: ObservableObject {
     @Published var isSDKAvailable: Bool = true
     @Published var glassesName: String = "Meta Glasses"
     @Published var batteryLevel: Int = 0
+    @Published var isAuthorized: Bool = false
+    @Published var statusMessage: String = "Tap Start Streaming"
     
     // MARK: - Private Properties
     
@@ -95,7 +97,11 @@ class MetaGlassesCameraManager: ObservableObject {
     
     /// Start video streaming from Meta Glasses
     func startStreaming() async {
-        guard state != .streaming else { return }
+        // Prevent multiple simultaneous start attempts
+        guard state != .streaming && state != .connecting else {
+            print("ℹ️ Already streaming or connecting, skipping startStreaming()")
+            return
+        }
         
         state = .connecting
         glassesStatus = .paired
@@ -130,11 +136,27 @@ class MetaGlassesCameraManager: ObservableObject {
             
             // Request camera permission after registration
             print("🔐 Requesting camera permission...")
+            var cameraPermissionGranted = false
             do {
                 let permStatus = try await wearablesInterface.requestPermission(.camera)
-                print("✅ Camera permission: \(permStatus)")
+                print("✅ Camera permission status: \(permStatus)")
+                cameraPermissionGranted = (permStatus == .granted)
+                
+                if permStatus != .granted {
+                    print("⚠️ Camera permission not granted: \(permStatus)")
+                    print("💡 Open Meta AI app → Settings → Connected Apps → ProjectUnmute → Enable Camera")
+                    statusMessage = "⚠️ Grant camera permission in Meta AI app"
+                }
             } catch {
                 print("⚠️ Camera permission error: \(error)")
+                print("💡 This may be a known SDK issue. Try:")
+                print("   1. Open Meta AI app")
+                print("   2. Go to Settings → Connected Apps → ProjectUnmute")
+                print("   3. Manually enable Camera permission")
+                print("   4. Return to this app and try again")
+                statusMessage = "⚠️ Enable camera in Meta AI → Settings → Connected Apps"
+                
+                // Don't return - try to continue, permission might already be granted in Meta AI
             }
             
             // Check available devices
@@ -193,10 +215,13 @@ class MetaGlassesCameraManager: ObservableObject {
             print("▶️ Starting stream session...")
             await streamSession!.start()
             
-            state = .streaming
-            glassesStatus = .streaming
+            // Don't set state to streaming yet - wait for actual frames via handleStateChange
+            state = .connecting
+            glassesStatus = .paired
             glassesName = "Ray-Ban Meta"
-            print("✅ Started streaming from Meta Glasses!")
+            statusMessage = "Waiting for glasses camera... Tap temple to activate"
+            print("⏳ Stream session started, waiting for glasses to send frames...")
+            print("💡 TIP: Put glasses on, tap the temple to wake camera")
             
         } catch {
             state = .error("Streaming failed: \(error.localizedDescription)")
@@ -210,27 +235,52 @@ class MetaGlassesCameraManager: ObservableObject {
     }
     
     /// Stop video streaming
-    func stopStreaming() {
-        Task {
-            await frameListenerToken?.cancel()
-            await stateListenerToken?.cancel()
-            await streamSession?.stop()
-        }
+    func stopStreaming() async {
+        print("⏹ Stopping Meta Glasses streaming...")
         
+        // Cancel listeners first
+        await frameListenerToken?.cancel()
+        await stateListenerToken?.cancel()
+        
+        // Stop the stream session
+        await streamSession?.stop()
+        
+        // Cancel any background tasks
         streamingTask?.cancel()
         streamingTask = nil
+        
+        // Clear references
         streamSession = nil
         deviceSelector = nil
+        frameListenerToken = nil
+        stateListenerToken = nil
         
+        // Reset state
         state = .disconnected
         glassesStatus = .connected
         currentFrame = nil
         frameRate = 0
+        isAuthorized = false  // Reset so user can re-authorize if needed
+        
         print("⏹ Stopped streaming")
+    }
+    
+    /// Force restart streaming (stop then start)
+    func restartStreaming() async {
+        print("🔄 Restarting Meta Glasses streaming...")
+        await stopStreaming()
+        try? await Task.sleep(nanoseconds: 500_000_000)  // Brief pause
+        await startStreaming()
     }
     
     /// Open Meta AI app for authorization
     func openMetaAIForAuthorization() async {
+        // Prevent multiple authorization attempts
+        guard !isAuthorized else {
+            print("ℹ️ Already authorized, skipping")
+            return
+        }
+        
         print("🔗 Opening Meta AI for authorization...")
         
         let wearables = Wearables.shared
@@ -247,8 +297,13 @@ class MetaGlassesCameraManager: ObservableObject {
                 print("📷 Camera permission result: \(permStatus)")
                 
                 if permStatus == .granted {
-                    print("✅ Camera permission granted! Starting stream...")
-                    await startStreaming()
+                    isAuthorized = true
+                    if state != .streaming {
+                        print("✅ Camera permission granted! Starting stream...")
+                        await startStreaming()
+                    } else {
+                        print("ℹ️ Already streaming, permission confirmed")
+                    }
                 } else {
                     print("⚠️ Camera permission not granted: \(permStatus)")
                     print("💡 You may need to grant camera permission in Meta AI app settings")
@@ -330,16 +385,23 @@ class MetaGlassesCameraManager: ObservableObject {
         case .streaming:
             state = .streaming
             glassesStatus = .streaming
+            statusMessage = "Streaming from Meta Glasses"
         case .stopped, .stopping:
             state = .disconnected
             glassesStatus = .connected
+            statusMessage = "Streaming stopped"
         case .waitingForDevice:
             state = .connecting
             glassesStatus = .paired
+            statusMessage = "👓 Tap glasses temple to start camera"
+            print("💡 Glasses connected but camera not active. User must tap temple to wake camera.")
         case .starting:
             state = .connecting
+            statusMessage = "Starting stream..."
         case .paused:
             glassesStatus = .connected
+            statusMessage = "⏸️ Stream paused - tap temple to resume"
+            print("⏸️ Stream paused! Tap glasses temple to resume, or take them off/put on to restart.")
         @unknown default:
             break
         }

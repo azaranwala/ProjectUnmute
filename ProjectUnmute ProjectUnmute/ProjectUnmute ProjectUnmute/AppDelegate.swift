@@ -24,22 +24,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         logger.info("📱 Received URL: \(url.absoluteString)")
         print("📱 AppDelegate received URL: \(url)")
         
-        // Handle Meta Wearables SDK callback
-        Task { @MainActor in
-            do {
-                let handled = try await Wearables.shared.handleUrl(url)
-                print(handled ? "✅ Meta SDK handled URL" : "⚠️ Meta SDK did not handle URL")
-                
-                if handled {
-                    print("🔄 Registration successful via URL scheme")
-                    await MetaGlassesCameraManager.shared.startStreaming()
-                }
-            } catch {
-                print("❌ Error handling URL: \(error)")
-            }
-        }
-        
-        return true
+        // Let SceneDelegate handle URLs to avoid duplicate processing
+        // SceneDelegate.scene(_:openURLContexts:) will handle this
+        print("ℹ️ AppDelegate URL - delegating to SceneDelegate")
+        return false
     }
     
     // MARK: - Universal Link Handling
@@ -55,21 +43,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         logger.info("🌐 AppDelegate received Universal Link: \(url.absoluteString)")
         print("🌐 AppDelegate Universal Link: \(url)")
         
-        Task { @MainActor in
-            do {
-                let handled = try await Wearables.shared.handleUrl(url)
-                print(handled ? "✅ Meta SDK handled Universal Link" : "⚠️ Meta SDK did not handle Universal Link")
-                
-                if handled {
-                    print("🔄 Registration successful via Universal Link")
-                    await MetaGlassesCameraManager.shared.startStreaming()
-                }
-            } catch {
-                print("❌ Error handling Universal Link: \(error)")
-            }
-        }
-        
-        return true
+        // Let SceneDelegate handle Universal Links to avoid duplicate processing
+        print("ℹ️ AppDelegate Universal Link - delegating to SceneDelegate")
+        return false
     }
     
     // MARK: - UISceneSession Lifecycle

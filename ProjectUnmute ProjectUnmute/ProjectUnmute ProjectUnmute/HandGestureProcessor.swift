@@ -619,9 +619,13 @@ final class GestureRecognitionManager: ObservableObject {
     @Published private(set) var thankYouHoldProgress: Double = 0  // 0 to 1 for 2 seconds
     @Published private(set) var didTriggerSpeech = false
     @Published private(set) var lastSpokenPhrase: String?
+    @Published var speakGesturesEnabled: Bool = true  // Enable/disable TTS for gestures
     
     private let processor = HandGestureProcessor()
     private var frameCount = 0
+    private var lastSpokenGesture: String?  // Track last spoken gesture to avoid repetition
+    private var lastSpeakTime: Date = .distantPast  // Debounce speech
+    private let speakDebounceInterval: TimeInterval = 1.5  // Minimum seconds between speaking same gesture
     
     private lazy var pointingHoldTracker = GestureHoldTracker(holdDuration: 2.0) { [weak self] gesture in
         Task { @MainActor in
@@ -656,6 +660,69 @@ final class GestureRecognitionManager: ObservableObject {
         thankYouHoldProgress = 0
         didTriggerSpeech = false
         lastSpokenPhrase = nil
+        lastSpokenGesture = nil
+    }
+    
+    /// Speak detected gesture through Meta Glasses speakers
+    private func speakGestureIfNeeded(_ gesture: DetectedGesture) {
+        guard speakGesturesEnabled else { return }
+        guard gesture.score >= 0.7 else { return }  // Only speak high-confidence gestures
+        
+        let gestureName = gesture.name
+        
+        // Skip "None" or unknown gestures
+        guard gestureName != "None" && gestureName != "UNKNOWN" else { return }
+        
+        // Debounce: don't repeat same gesture too quickly
+        let now = Date()
+        if gestureName == lastSpokenGesture && now.timeIntervalSince(lastSpeakTime) < speakDebounceInterval {
+            return
+        }
+        
+        // Convert gesture name to speakable text
+        let speakableText = gestureToSpeakableText(gestureName)
+        
+        // Speak the gesture
+        SpeechSynthesizer.shared.speak(speakableText)
+        lastSpokenGesture = gestureName
+        lastSpeakTime = now
+        lastSpokenPhrase = speakableText
+        didTriggerSpeech = true
+        
+        // Reset speech indicator after delay
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            didTriggerSpeech = false
+        }
+    }
+    
+    /// Convert gesture name to human-readable speakable text
+    private func gestureToSpeakableText(_ gestureName: String) -> String {
+        // Map gesture names to natural speech
+        let gestureMap: [String: String] = [
+            "POINTING": "Pointing",
+            "THANK_YOU": "Thank you",
+            "Closed_Fist": "Closed fist",
+            "Open_Palm": "Open palm",
+            "Victory": "Peace sign",
+            "Thumb_Up": "Thumbs up",
+            "Thumb_Down": "Thumbs down",
+            "ILoveYou": "I love you",
+            "WAVE": "Wave",
+            "OK": "OK sign",
+            "ROCK": "Rock on",
+            "CALL": "Call me",
+        ]
+        
+        if let mapped = gestureMap[gestureName] {
+            return mapped
+        }
+        
+        // Convert SNAKE_CASE or camelCase to readable text
+        return gestureName
+            .replacingOccurrences(of: "_", with: " ")
+            .lowercased()
+            .capitalized
     }
     
     private func handleGestureTrigger(gesture: String, phrase: String) {
@@ -706,6 +773,11 @@ extension GestureRecognitionManager: HandGestureProcessorDelegate {
             
             // Track gestures for 2-second trigger
             self.updateGestureTrackers(gestures: enhancedGestures)
+            
+            // Speak detected gestures through Meta Glasses speakers
+            for gesture in enhancedGestures {
+                self.speakGestureIfNeeded(gesture)
+            }
         }
     }
     
