@@ -184,30 +184,32 @@ struct ContentView: View {
             .padding(.top, 8)
             
             if showAvatarView {
-                // Avatar video view
+                // Avatar video view - same size as camera (45% of screen)
                 AvatarVideoPlayer(videoName: avatarManager.currentVideoName)
-                    .aspectRatio(16/9, contentMode: .fit)
+                    .frame(height: UIScreen.main.bounds.height * 0.45)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding()
+                    .padding(.horizontal)
             } else {
-                // Live video feed with gesture overlay
-                ZStack {
-                    // Use camera preview layer for live video, fallback to frame display
-                    if let previewLayer = cameraManager.previewLayer {
-                        CameraPreviewView(previewLayer: previewLayer)
-                            .aspectRatio(16/9, contentMode: .fit)
-                    } else {
-                        MWDATVideoView(frame: cameraManager.currentFrame)
-                            .aspectRatio(16/9, contentMode: .fit)
+                // Live video feed with gesture overlay - 45% of screen height (same as ASL-to-Text)
+                GeometryReader { geometry in
+                    ZStack {
+                        // Use camera preview layer for live video, fallback to frame display
+                        if let previewLayer = cameraManager.previewLayer {
+                            CameraPreviewView(previewLayer: previewLayer)
+                        } else {
+                            MWDATVideoView(frame: cameraManager.currentFrame)
+                        }
+                        
+                        // Hand landmarks overlay
+                        if !gestureManager.detectedGestures.isEmpty {
+                            HandLandmarksOverlay(gestures: gestureManager.detectedGestures)
+                        }
                     }
-                    
-                    // Hand landmarks overlay
-                    if !gestureManager.detectedGestures.isEmpty {
-                        HandLandmarksOverlay(gestures: gestureManager.detectedGestures)
-                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding()
+                .frame(height: UIScreen.main.bounds.height * 0.45)
+                .padding(.horizontal)
             }
             
             // Speech transcription display
@@ -459,31 +461,52 @@ struct ContentView: View {
                 }
                 .padding(.vertical, 8)
                 
-                // Camera view (compact)
-                ZStack {
-                    if let previewLayer = cameraManager.previewLayer {
-                        CameraPreviewView(previewLayer: previewLayer)
-                            .frame(height: 150)
-                    } else {
-                        MWDATVideoView(frame: cameraManager.currentFrame)
-                            .frame(height: 150)
-                    }
-                    
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Image(systemName: cameraManager.cameraSource.icon)
-                            Text(cameraManager.cameraSource.rawValue)
+                // Camera view - 60% of screen height
+                GeometryReader { geometry in
+                    ZStack {
+                        // For iPhone cameras, use native preview layer
+                        // For Meta Glasses, use MWDATVideoView with currentFrame
+                        if cameraManager.cameraSource == .metaGlasses {
+                            // Meta Glasses uses currentFrame directly
+                            MWDATVideoView(frame: cameraManager.currentFrame)
+                        } else if let previewLayer = cameraManager.previewLayer {
+                            // iPhone cameras use AVCaptureVideoPreviewLayer
+                            CameraPreviewView(previewLayer: previewLayer)
+                        } else if let frame = cameraManager.currentFrame {
+                            // Fallback: show currentFrame if preview layer not available
+                            MWDATVideoView(frame: frame)
+                        } else {
+                            // Loading state
+                            ZStack {
+                                Color.black
+                                VStack(spacing: 8) {
+                                    ProgressView()
+                                        .tint(.white)
+                                    Text("Starting camera...")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
                         }
-                        .font(.caption2)
-                        .padding(4)
-                        .background(Color.black.opacity(0.7))
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
+                        
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Image(systemName: cameraManager.cameraSource.icon)
+                                Text(cameraManager.cameraSource.rawValue)
+                            }
+                            .font(.caption2)
+                            .padding(4)
+                            .background(Color.black.opacity(0.7))
+                            .foregroundColor(.white)
+                            .clipShape(Capsule())
+                        }
+                        .padding(.bottom, 4)
                     }
-                    .padding(.bottom, 4)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .frame(height: UIScreen.main.bounds.height * 0.45)
                 .padding(.horizontal)
                 
                 // ASL Detection panel (compact)

@@ -105,22 +105,24 @@ class DeviceCameraManager: NSObject, ObservableObject {
         guard availableCameras.contains(source) else { return }
         print("🔄 Switching camera to: \(source.rawValue)")
         
-        // Stop current streaming (including Meta Glasses)
+        let wasUsingMetaGlasses = (cameraSource == .metaGlasses)
+        
+        // Stop current streaming
         stopStreaming()
         metaGlassesSubscriptions.removeAll()
         
-        // Stop Meta Glasses streaming properly if we were using it
-        Task {
-            await MetaGlassesCameraManager.shared.stopStreaming()
-            
-            // Brief pause to ensure cleanup
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            
-            await MainActor.run {
-                self.cameraSource = source
-                self.startStreaming()
+        // Update source immediately
+        cameraSource = source
+        
+        // If we were using Meta Glasses, clean up async but don't wait
+        if wasUsingMetaGlasses {
+            Task {
+                await MetaGlassesCameraManager.shared.stopStreaming()
             }
         }
+        
+        // Start new camera immediately (don't wait for Meta cleanup)
+        startStreaming()
     }
     
     func startStreaming() {
@@ -143,8 +145,37 @@ class DeviceCameraManager: NSObject, ObservableObject {
             return
         }
         
-        sessionQueue.async { [weak self] in
-            self?.setupCaptureSession()
+        // Check camera permission first
+        checkCameraPermission { [weak self] granted in
+            guard let self = self else { return }
+            if granted {
+                self.sessionQueue.async {
+                    self.setupCaptureSession()
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.state = .error("Camera permission denied. Please enable in Settings.")
+                }
+            }
+        }
+    }
+    
+    private func checkCameraPermission(completion: @escaping (Bool) -> Void) {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            print("📷 Camera permission: authorized")
+            completion(true)
+        case .notDetermined:
+            print("📷 Camera permission: requesting...")
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                print("📷 Camera permission result: \(granted)")
+                completion(granted)
+            }
+        case .denied, .restricted:
+            print("📷 Camera permission: denied/restricted")
+            completion(false)
+        @unknown default:
+            completion(false)
         }
     }
     
@@ -290,6 +321,8 @@ class DeviceCameraManager: NSObject, ObservableObject {
     private var metaGlassesSubscriptions = Set<AnyCancellable>()
     
     private func setupCaptureSession() {
+        print("📷 setupCaptureSession() called for: \(cameraSource.rawValue)")
+        
         // Handle Meta Glasses separately via MWDAT SDK
         if cameraSource == .metaGlasses {
             setupMetaGlassesStreaming()
@@ -305,8 +338,10 @@ class DeviceCameraManager: NSObject, ObservableObject {
         switch cameraSource {
         case .iPhoneFront:
             camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+            print("📷 Looking for front camera: \(camera != nil ? "found" : "NOT FOUND")")
         case .iPhoneBack:
             camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+            print("📷 Looking for back camera: \(camera != nil ? "found" : "NOT FOUND")")
         case .metaGlasses:
             // Handled above
             return
@@ -324,17 +359,24 @@ class DeviceCameraManager: NSObject, ObservableObject {
         }
         
         guard let camera = camera else {
+            print("❌ Camera not found for: \(cameraSource.rawValue)")
             DispatchQueue.main.async {
                 self.state = .error("Camera not available: \(self.cameraSource.rawValue)")
             }
             return
         }
         
+        print("📷 Camera found: \(camera.localizedName)")
+        
         do {
             let input = try AVCaptureDeviceInput(device: camera)
+            print("📷 Created capture input")
             
             if session.canAddInput(input) {
                 session.addInput(input)
+                print("📷 Added input to session")
+            } else {
+                print("❌ Cannot add input to session")
             }
             
             // Setup video output
@@ -347,24 +389,27 @@ class DeviceCameraManager: NSObject, ObservableObject {
             
             if session.canAddOutput(output) {
                 session.addOutput(output)
+                print("📷 Added output to session")
+            } else {
+                print("❌ Cannot add output to session")
             }
             
             self.captureSession = session
             self.videoOutput = output
             
-            // Create preview layer
+            // Create preview layer on main thread
             let layer = AVCaptureVideoPreviewLayer(session: session)
             layer.videoGravity = .resizeAspectFill
+            print("📷 Created preview layer")
+            
+            // Start running BEFORE setting UI state
+            session.startRunning()
+            print("📷 Session started running: \(session.isRunning)")
             
             DispatchQueue.main.async {
                 self.previewLayer = layer
-            }
-            
-            // Start running
-            session.startRunning()
-            
-            DispatchQueue.main.async {
                 self.state = .streaming
+                print("📷 Preview layer set, state = streaming")
             }
             
         } catch {
@@ -409,19 +454,37 @@ extension DeviceCameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
 struct CameraPreviewView: UIViewRepresentable {
     let previewLayer: AVCaptureVideoPreviewLayer?
     
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
+    func makeUIView(context: Context) -> CameraPreviewUIView {
+        let view = CameraPreviewUIView()
         view.backgroundColor = .black
+        view.previewLayer = previewLayer
         return view
     }
     
-    func updateUIView(_ uiView: UIView, context: Context) {
-        // Remove existing layers
-        uiView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-        
-        if let previewLayer = previewLayer {
-            previewLayer.frame = uiView.bounds
-            uiView.layer.addSublayer(previewLayer)
+    func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
+        uiView.previewLayer = previewLayer
+    }
+}
+
+/// Custom UIView that properly handles AVCaptureVideoPreviewLayer frame updates
+class CameraPreviewUIView: UIView {
+    var previewLayer: AVCaptureVideoPreviewLayer? {
+        didSet {
+            // Remove old layer
+            oldValue?.removeFromSuperlayer()
+            
+            // Add new layer
+            if let newLayer = previewLayer {
+                newLayer.videoGravity = .resizeAspectFill
+                newLayer.frame = bounds
+                layer.insertSublayer(newLayer, at: 0)
+            }
         }
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Update preview layer frame when view bounds change
+        previewLayer?.frame = bounds
     }
 }
