@@ -162,108 +162,159 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 
 ##  ASL Sign Recognition
 
-### Supported ASL Signs
-The app supports **229+ ASL signs** including letters, numbers, and common words using a hybrid detection system with **multi-language support** (English, Spanish, Chinese).
+### Overview
+The app uses a **hybrid detection system** combining motion-based detection, rule-based static sign detection, and ML classification. The system supports **9 primary ASL signs** optimized for reliable detection across all camera sources, with **multi-language output** (English, Spanish, Chinese).
 
 ---
 
-### 🎯 TIER 1: Motion-Based Signs (Highest Reliability)
+### 🎯 Primary ASL Signs (9 Optimized Signs)
 
-These signs use `MotionSignDetector` with gesture+motion analysis. **Recommended for demos.**
+These 9 signs are specifically tuned for **consistent, non-overlapping detection** across iPhone Front Camera, Back Camera, and Meta Glasses.
 
-| Sign | Motion Pattern | How to Perform | Confidence | Front | Back | Glasses |
-|------|---------------|----------------|------------|-------|------|---------|
-| **HELLO** | Salute outward | Flat hand at forehead, sweep outward | 70-85% | ✅ | ✅ | ✅ |
-| **THANK YOU** | Chin outward | Flat hand at chin, arc forward/down | 70-85% | ✅ | ✅ | ✅ |
-| **PLEASE** | Circular on chest | Flat hand circles on chest | 70-85% | ✅ | ✅ | ✅ |
-| **YES** | Fist pump | Closed fist, pump up/down (3+ cycles) | 75-90% | ✅ | ✅ | ✅ |
-| **NO** | Side-to-side | Wave 1-3 fingers side-to-side (3+ cycles) | 75-90% | ✅ | ✅ | ✅ |
-| **GOOD** | Chin downward | Flat hand at chin, move down | 75-90% | ✅ | ✅ | ✅ |
-| **BYE** | Wave | Open hand waves side-to-side (2+ cycles) | 75-90% | ✅ | ✅ | ✅ |
-| **I LOVE YOU** | Static hold | Thumb + index + pinky extended | 90-95% | ✅ | ✅ | ✅ |
+| # | Sign | Detection Method | How to Perform | Confidence | English | Spanish | Chinese |
+|---|------|-----------------|----------------|------------|---------|---------|--------|
+| 1 | **YES** | Motion (MotionSignDetector) | Closed fist, pump up/down vertically | 80-90% | Yes | Sí | 是 |
+| 2 | **PLEASE** | Motion (MotionSignDetector) | Open hand on chest, rub in circles or back-and-forth | 80-85% | Please | Por favor | 请 |
+| 3 | **GOOD** | Motion + Static | Thumbs up OR flat hand chin→down | 85-92% | Good | Bueno | 好 |
+| 4 | **PEACE** | Static (Rule-based) | Index + middle fingers extended (V sign), thumb curled | 85-88% | Peace | Paz | 和平 |
+| 5 | **STOP** | Static (Rule-based) | Open palm facing forward, fingers together | 85-90% | Stop | Para | 停 |
+| 6 | **BYE** | Motion (MotionSignDetector) | Open hand, wave side-to-side (1+ cycle) | 80-85% | Bye | Adiós | 再见 |
+| 7 | **HELLO** | Motion (MotionSignDetector) | Open hand, single horizontal sweep outward | 80-85% | Hello | Hola | 你好 |
+| 8 | **THANK YOU** | Motion (MotionSignDetector) | Open hand at chin, move downward | 80-85% | Thank You | Gracias | 谢谢 |
+| 9 | **I LOVE YOU** | Static (Rule-based) | Thumb + index + pinky extended (🤟) | 90-95% | I Love You | Te quiero | 我爱你 |
 
 ---
 
-### 🎯 TIER 2: Static Signs (Rule-Based Detection)
+### 📱 Camera Compatibility Matrix
 
-These use finger pattern detection. **Very reliable for distinctive hand shapes.**
+| Sign | iPhone Front | iPhone Back | Meta Glasses | Notes |
+|------|:------------:|:-----------:|:------------:|-------|
+| **YES** | ✅ High | ✅ High | ✅ High | Fist + vertical motion |
+| **PLEASE** | ✅ High | ✅ High | ✅ High | Rubbing/circular motion |
+| **GOOD** | ✅ High | ✅ High | ✅ High | Thumbs up |
+| **PEACE** | ✅ High | ✅ High | ✅ High | V-sign, thumb must be curled |
+| **STOP** | ✅ High | ✅ High | ✅ High | Open palm |
+| **BYE** | ✅ High | ✅ High | ✅ High | Waving motion |
+| **HELLO** | ✅ High | ✅ High | ✅ High | Single sweep |
+| **THANK YOU** | ✅ High | ✅ High | ✅ High | Chin to down motion |
+| **I LOVE YOU** | ✅ High | ✅ High | ✅ High | Static 3-finger hold |
 
-| Sign | Hand Shape | Confidence | Front | Back | Glasses |
-|------|-----------|------------|-------|------|---------|
-| **Good/Thumbs Up** | Fist + thumb pointing up | 90-92% | ✅ | ✅ | ✅ |
-| **Peace/2** | Index + middle extended | 85-88% | ✅ | ✅ | ✅ |
-| **1/Point** | Only index finger extended | 85-88% | ✅ | ✅ | ✅ |
-| **Y** | Thumb + pinky only | 85-88% | ✅ | ✅ | ✅ |
-| **L** | Thumb + index at 90° angle | 82-85% | ✅ | ✅ | ✅ |
-| **3** | Thumb + index + middle | 82-85% | ✅ | ✅ | ✅ |
-| **4** | 4 fingers extended, thumb curled | 82-85% | ✅ | ✅ | ✅ |
-| **W** | Index + middle + ring extended | 82-85% | ✅ | ✅ | ✅ |
-| **I** | Only pinky extended | 82-85% | ✅ | ✅ | ✅ |
+**Detection Quality Summary:**
+| Camera Source | Quality | Best For |
+|---------------|---------|----------|
+| **iPhone Front** | ⭐⭐⭐⭐⭐ Excellent | Selfie-mode signing, demos |
+| **iPhone Back** | ⭐⭐⭐⭐ Very Good | Third-person recording |
+| **Meta Glasses** | ⭐⭐⭐⭐⭐ Excellent | First-person POV, real-world use |
+
+---
+
+### 🔧 Detection System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ASLSignDetector                              │
+│  (Orchestrates detection, manages cooldowns, outputs speech)    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────┐    ┌─────────────────────┐             │
+│  │ MotionSignDetector  │    │  ASLModelClassifier │             │
+│  │ (Dynamic Signs)     │    │  (Static Signs)     │             │
+│  │                     │    │                     │             │
+│  │ • YES (fist pump)   │    │ • Centroid-based ML │             │
+│  │ • PLEASE (rub)      │    │ • 229 sign classes  │             │
+│  │ • BYE (wave)        │    │ • 80% threshold     │             │
+│  │ • HELLO (sweep)     │    │                     │             │
+│  │ • THANK YOU (chin)  │    │ Filtered to 9 signs:│             │
+│  │ • GOOD (thumbs up)  │    │ YES, PLEASE, GOOD,  │             │
+│  │                     │    │ PEACE, STOP, BYE,   │             │
+│  └─────────────────────┘    │ HELLO, THANK YOU,   │             │
+│           │                  │ I LOVE YOU          │             │
+│           │                  └─────────────────────┘             │
+│           ▼                            │                         │
+│  ┌─────────────────────────────────────┴───────────────────────┐│
+│  │                    Detection Pipeline                        ││
+│  │  1. Validate landmarks (filter noise)                        ││
+│  │  2. Check motion signs FIRST (priority)                      ││
+│  │  3. Check ML classifier (filtered to 9 signs)                ││
+│  │  4. Apply 8-frame stabilization                              ││
+│  │  5. Apply 5-second transition cooldown                       ││
+│  │  6. Confirm and speak via TTS                                ││
+│  └──────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### ⚙️ Detection Parameters
+
+| Parameter | Value | Purpose |
+|-----------|-------|--------|
+| **Stability Threshold** | 8 frames | Consecutive frames required before confirmation |
+| **Transition Cooldown** | 5 seconds | Wait time between ANY two sign detections |
+| **Same-Sign Cooldown** | 8 seconds | Wait time before detecting the same sign again |
+| **Confidence Threshold** | 80% | Minimum confidence to confirm a sign |
+| **Motion Threshold** | 0.02 | Minimum movement magnitude to detect motion |
+
+---
+
+### 🗂️ Dataset & Training
+
+| Component | Details |
+|-----------|--------|
+| **Hand Landmark Model** | MediaPipe Hand Landmarker (21 landmarks, 63 features) |
+| **ML Classifier** | Centroid-based classifier with EMA smoothing |
+| **Training Data** | `ASLModelData.json` (229 sign classes) |
+| **Feature Vector** | 63 floats (x, y, z for each of 21 landmarks) |
+| **Coordinate System** | Normalized 0-1, X-mirrored for consistency across cameras |
+
+---
+
+### 🌍 Multi-Language Output
+
+Detected signs are automatically translated and spoken via Text-to-Speech:
+
+| Language | Code | TTS Voice | Example Output |
+|----------|------|-----------|---------------|
+| **English** | en-US | Default US English | "Hello" |
+| **Spanish** | es-ES | Spanish (Spain) | "Hola" |
+| **Chinese** | zh-CN | Mandarin Chinese | "你好" |
+
+---
+
+### 🎯 TIER 2: Additional Static Signs (Rule-Based)
+
+These signs are detected via finger pattern analysis but may overlap with the 9 primary signs:
+
+| Sign | Hand Shape | Confidence |
+|------|-----------|------------|
+| **1/Point** | Only index finger extended | 85-88% |
+| **Y** | Thumb + pinky only | 85-88% |
+| **L** | Thumb + index at 90° angle | 82-85% |
+| **3** | Thumb + index + middle | 82-85% |
+| **4** | 4 fingers extended, thumb curled | 82-85% |
+| **W** | Index + middle + ring extended | 82-85% |
 
 ---
 
 ### 🎯 TIER 3: ML Model Signs (229 Classes)
 
-These use centroid-based ML classification. Confidence varies by sign distinctiveness.
+The full ML model supports 229 sign classes, but output is **filtered to only the 9 primary signs** to prevent false positives.
 
-**Fingerspelling (A-Z):** Expected 70-90% confidence
-```
-A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
-```
-
-**Numbers (0-9):** Expected 75-95% confidence
-```
-0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-```
-
-**Common Words (197 signs):** Expected 60-85% confidence
-```
-AFTERNOON, ALL, ANGRY, BABY, BAD, BATHROOM, BIG, BLACK, BLUE, BROTHER, 
-COLD, COME, DOCTOR, DONE, DRINK, EAT, FAMILY, FATHER, FINISH, FOOD, 
-GO, GOOD, GOODBYE, HAPPY, HELLO, HELP, HOME, HOT, HUNGRY, HURT, 
-KNOW, LIKE, LOVE, MILK, MOM, MORE, MORNING, MOTHER, MY, NAME, NEED, 
-NICE, NIGHT, NO, NOW, ORANGE, PLEASE, RED, SAD, SCHOOL, SEE, SICK, 
-SISTER, SIT, SLEEP, SORRY, STAND, STOP, THANK_YOU, TIRED, TODAY, 
-TOMORROW, WAIT, WANT, WATER, WEEK, WHAT, WHEN, WHERE, WHITE, WHO, 
-WHY, WORK, YEAR, YES, YOU, YOUR... (and 120+ more)
-```
-
----
-
-### 🌍 Multi-Language Support
-
-Detected signs are automatically translated and spoken in the user's preferred language:
-
-| Sign | English | Spanish | Chinese |
-|------|---------|---------|---------|
-| HELLO | Hello | Hola | 你好 |
-| THANK YOU | Thank You | Gracias | 谢谢 |
-| PLEASE | Please | Por favor | 请 |
-| YES | Yes | Sí | 是 |
-| NO | No | No | 不 |
-| GOOD | Good | Bueno | 好 |
-| BYE | Bye | Adiós | 再见 |
-| I LOVE YOU | I Love You | Te quiero | 我爱你 |
-
----
-
-### 📱 Camera Compatibility
-
-| Camera Source | Detection Quality | Notes |
-|---------------|-------------------|-------|
-| **iPhone Front** | ⭐⭐⭐⭐⭐ Excellent | Best for selfie-mode signing |
-| **iPhone Back** | ⭐⭐⭐⭐ Very Good | Works with geometric pinky detection |
-| **Meta Glasses** | ⭐⭐⭐⭐⭐ Excellent | First-person POV, natural signing |
+**Fingerspelling (A-Z):** Available in ML model, filtered out
+**Numbers (0-9):** Available in ML model, filtered out
+**Common Words:** 197 signs available, 9 allowed through filter
 
 ---
 
 ### Detection Features
+- **Landmark Validation**: Filters out noise when no hand is in frame
 - **Temporal Smoothing**: Exponential moving average reduces jitter
-- **N-of-M Agreement**: Requires 3 of 5 frames to agree before confirming
+- **N-of-M Agreement**: Requires 8 consecutive frames to confirm
 - **Rotation Invariance**: Works regardless of hand orientation
 - **80% Confidence Threshold**: Only shows high-confidence predictions
-- **I Love You Priority**: Checked first to prevent false HELLO/YES detections
-- **Geometric Pinky Detection**: Alternative detection for back camera compatibility
+- **I Love You Priority**: Checked first to prevent false positives
+- **Geometric Pinky Detection**: Alternative detection for back camera
+- **Coordinate Mirroring**: X-axis mirrored for all cameras for consistency
 
 ### Basic Gestures (MediaPipe)
 | Gesture | Icon | Description |

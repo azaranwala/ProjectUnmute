@@ -332,8 +332,11 @@ class DeviceCameraManager: NSObject, ObservableObject {
         print("📷 setupCaptureSession() called for: \(cameraSource.rawValue)")
         
         // Handle Meta Glasses separately via MWDAT SDK
+        // IMPORTANT: Dispatch to main thread since this function may be called from sessionQueue
         if cameraSource == .metaGlasses {
-            setupMetaGlassesStreaming()
+            Task { @MainActor in
+                self.setupMetaGlassesStreaming()
+            }
             return
         }
         

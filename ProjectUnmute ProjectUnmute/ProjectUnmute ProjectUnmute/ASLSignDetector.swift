@@ -46,7 +46,7 @@ final class ASLSignDetector: ObservableObject {
     private var signHistory: [String] = []
     private var stableSign: String? // For stabilization
     private var stableSignCount: Int = 0
-    private let stabilityThreshold: Int = 3 // Require 3 consecutive frames
+    private let stabilityThreshold: Int = 8 // Require 8 consecutive frames (increased to prevent double detection)
     
     // MARK: - Hand Landmark Indices (MediaPipe standard)
     
@@ -76,6 +76,25 @@ final class ASLSignDetector: ObservableObject {
     func processLandmarks(_ landmarks: [(x: Float, y: Float, z: Float)]) {
         guard landmarks.count == 21 else { return }
         
+        // VALIDITY CHECK: Ensure landmarks are reasonable (not noise)
+        // Check if landmarks are within valid range (0-1 for normalized coordinates)
+        let validLandmarks = landmarks.allSatisfy { lm in
+            lm.x >= 0 && lm.x <= 1 && lm.y >= 0 && lm.y <= 1
+        }
+        guard validLandmarks else {
+            // Invalid landmarks - likely noise, skip processing
+            return
+        }
+        
+        // Check hand size - distance from wrist to middle fingertip should be reasonable
+        let wrist = landmarks[0]
+        let middleTip = landmarks[12]
+        let handSize = sqrt(pow(middleTip.x - wrist.x, 2) + pow(middleTip.y - wrist.y, 2))
+        guard handSize > 0.05 && handSize < 0.8 else {
+            // Hand too small (noise) or too large (invalid)
+            return
+        }
+        
         isDetecting = true
         
         // PRIORITY 1: Check for motion-based dynamic signs (HELLO, THANK YOU, YES, NO, I LOVE YOU, etc.)
@@ -83,21 +102,24 @@ final class ASLSignDetector: ObservableObject {
         if let motionResult = MotionSignDetector.shared.processFrame(landmarks: landmarks) {
             if motionResult.isComplete {
                 // Motion sign completed - confirm immediately (skip hold requirement)
-                // The motion detector already validates the pattern, so trust isComplete
                 confirmSign(motionResult.sign)
                 self.confidence = motionResult.confidence
                 self.detectedSign = motionResult.sign
-                logger.info("Motion sign completed: \(motionResult.sign)")
+                print("✅ ASL CONFIRMED: \(motionResult.sign) (confidence: \(String(format: "%.0f", motionResult.confidence * 100))%)")
                 return
             } else if motionResult.confidence >= 0.5 {
-                // Motion in progress - show feedback
+                // Motion in progress - show stabilizing message
                 self.confidence = motionResult.confidence
-                self.detectedSign = "\(motionResult.sign) (hold to confirm)"
+                self.detectedSign = "ASL Detection in Progress..."
+                print("🔄 ASL STABILIZING: \(motionResult.sign) (confidence: \(String(format: "%.0f", motionResult.confidence * 100))%)")
                 return
             }
         }
         
         // PRIORITY 2: Try ML classifier for static signs if enabled and loaded
+        // FILTER: Only allow our 9 supported signs (NO is disabled, PLEASE is enabled)
+        let allowedSigns: Set<String> = ["YES", "PLEASE", "GOOD", "PEACE", "STOP", "HELLO", "BYE", "THANK YOU", "THANKYOU", "I LOVE YOU", "ILOVEYOU"]
+        
         if useMLClassifier && ASLModelClassifier.shared.isModelLoaded {
             // Flatten landmarks to 63 features for ML model
             var features: [Float] = []
@@ -108,6 +130,19 @@ final class ASLSignDetector: ObservableObject {
             }
             
             if let result = ASLModelClassifier.shared.classify(landmarks: features) {
+                // DEBUG LOG: Show what ML classifier detected
+                print("🤖 ML CLASSIFIER: \(result.sign) (confidence: \(String(format: "%.0f", result.confidence * 100))%)")
+                
+                // FILTER: Ignore signs not in our allowed list
+                let normalizedSign = result.sign.uppercased().replacingOccurrences(of: " ", with: "")
+                guard allowedSigns.contains(result.sign.uppercased()) || allowedSigns.contains(normalizedSign) else {
+                    // Sign not in allowed list - show unable to recognize
+                    self.detectedSign = "Unable to recognize ASL sign with high confidence"
+                    self.confidence = 0
+                    print("⚠️ ASL FILTERED: '\(result.sign)' not in allowed signs list")
+                    return
+                }
+                
                 // Apply confidence thresholds: >=80% normal (unified with classifier)
                 if result.confidence >= 0.80 {
                     // High confidence - use stabilization
@@ -118,13 +153,15 @@ final class ASLSignDetector: ObservableObject {
                         stableSignCount = 1
                     }
                     
-                    // Only process if sign is stable (3+ consecutive frames)
+                    // Only process if sign is stable (5+ consecutive frames)
                     if stableSignCount >= stabilityThreshold {
                         handleDetectedSign(result.sign, confidence: result.confidence)
+                        print("✅ ASL CONFIRMED: \(result.sign) (confidence: \(String(format: "%.0f", result.confidence * 100))%)")
                     } else {
-                        // Show what we're seeing but don't confirm yet
+                        // Show stabilizing message
                         self.confidence = result.confidence
-                        self.detectedSign = result.sign + " (stabilizing...)"
+                        self.detectedSign = "ASL Detection in Progress..."
+                        print("🔄 ASL STABILIZING: \(result.sign) (\(stableSignCount)/\(stabilityThreshold) frames)")
                     }
                     return
                 } else {
@@ -132,8 +169,8 @@ final class ASLSignDetector: ObservableObject {
                     stableSign = nil
                     stableSignCount = 0
                     self.confidence = result.confidence
-                    self.detectedSign = "Unable to recognize the sign"
-                    logger.debug("Low confidence (\(result.confidence)): \(result.sign)")
+                    self.detectedSign = "Unable to recognize ASL sign with high confidence"
+                    print("⚠️ ASL LOW CONF: \(result.sign) (\(String(format: "%.0f", result.confidence * 100))% < 80%)")
                     return
                 }
             }
@@ -843,10 +880,11 @@ final class ASLSignDetector: ObservableObject {
         // Note: In Vision coordinates, lower Y = higher on screen
         let yDiff = pipPoint.y - tipPoint.y
         
-        // Pinky is shorter and needs more lenient threshold
+        // STRICTER pinky detection to avoid Peace sign false positives
         if isPinky {
-            // Pinky extended if tip is at or above PIP level (more lenient)
-            return yDiff > -0.01
+            // Pinky extended only if tip is clearly above PIP level
+            // Changed from -0.01 to 0.02 to be stricter
+            return yDiff > 0.02
         }
         
         // For other fingers, require tip to be at least 0.02 units above PIP
