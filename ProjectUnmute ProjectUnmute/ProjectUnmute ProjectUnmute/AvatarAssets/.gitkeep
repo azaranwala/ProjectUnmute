@@ -1,0 +1,15 @@
+# Avatar Video Assets
+
+Place your sign language avatar video files here.
+Supported formats: .mp4, .mov, .m4v
+
+## Naming Convention
+Name videos after the phrase they represent (use underscores for spaces):
+- hello.mp4
+- thank_you.mp4
+- goodbye.mp4
+- i_love_you.mp4
+- help.mp4
+- etc.
+
+The SpeechRecognitionManager will automatically match spoken words to video files.
