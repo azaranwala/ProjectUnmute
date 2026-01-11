@@ -188,12 +188,7 @@ struct ContentView: View {
             
             Spacer()
         }
-        .onChange(of: speechManager.matchedAvatarVideo) { _, newVideo in
-            // Auto-play avatar video when speech matches a word
-            if let videoName = newVideo {
-                avatarManager.playVideo(for: videoName)
-            }
-        }
+        // NOTE: onChange for matchedAvatarVideo is handled in parent NavigationStack
         .onAppear {
             // Auto-start speech recognition when Speech → ASL view appears
             Task {

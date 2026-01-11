@@ -9,6 +9,7 @@ struct AvatarVideoPlayer: View {
     let videoName: String?
     @State private var player: AVPlayer?
     @State private var isPlaying = false
+    @State private var playerObserver: NSKeyValueObservation?
     
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProjectUnmute", category: "AvatarPlayer")
     
@@ -72,10 +73,17 @@ struct AvatarVideoPlayer: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .onChange(of: videoName) { _, newName in
+        .onChange(of: videoName) { oldName, newName in
+            logger.info("onChange triggered: '\(oldName ?? "nil")' -> '\(newName ?? "nil")'")
             loadVideo(named: newName)
         }
         .onAppear {
+            logger.info("onAppear triggered with videoName: '\(videoName ?? "nil")'")
+            loadVideo(named: videoName)
+        }
+        .task(id: videoName) {
+            // This ensures video loads when videoName changes, even if view is recreated
+            logger.info("task(id:) triggered with videoName: '\(videoName ?? "nil")'")
             loadVideo(named: videoName)
         }
     }
@@ -156,13 +164,36 @@ struct AvatarVideoPlayer: View {
         
         if let url = videoURL {
             logger.info("Loading avatar video: \(url.lastPathComponent)")
-            let newPlayer = AVPlayer(url: url)
+            
+            // Create player item first
+            let playerItem = AVPlayerItem(url: url)
+            let newPlayer = AVPlayer(playerItem: playerItem)
             newPlayer.actionAtItemEnd = .none
+            
+            // Wait for player item to be ready before playing
+            playerObserver = playerItem.observe(\.status, options: [.new]) { [self] item, _ in
+                DispatchQueue.main.async {
+                    switch item.status {
+                    case .readyToPlay:
+                        logger.info("Player ready - starting playback for: \(url.lastPathComponent)")
+                        newPlayer.seek(to: .zero)
+                        newPlayer.play()
+                        isPlaying = true
+                    case .failed:
+                        logger.error("Player failed to load: \(item.error?.localizedDescription ?? "unknown error")")
+                        isPlaying = false
+                    case .unknown:
+                        logger.info("Player status unknown, waiting...")
+                    @unknown default:
+                        break
+                    }
+                }
+            }
             
             // Loop the video
             NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
-                object: newPlayer.currentItem,
+                object: playerItem,
                 queue: .main
             ) { _ in
                 newPlayer.seek(to: .zero)
@@ -170,11 +201,16 @@ struct AvatarVideoPlayer: View {
             }
             
             player = newPlayer
-            player?.play()
-            isPlaying = true
+            
+            // Also try to play immediately in case it's already ready
+            if playerItem.status == .readyToPlay {
+                newPlayer.play()
+                isPlaying = true
+            }
         } else {
             logger.warning("Avatar video not found: \(name)")
             player = nil
+            playerObserver = nil
             isPlaying = false
         }
     }
@@ -241,6 +277,16 @@ final class AvatarVideoManager: ObservableObject {
         
         logger.info("Attempting to play video for: '\(phrase)' (normalized: '\(normalized)')")
         logger.info("Available videos count: \(self.availableVideos.count)")
+        
+        // Debug: Check if 'again' is in the list
+        let containsAgain = self.availableVideos.contains("again")
+        let containsNormalized = self.availableVideos.contains(normalized)
+        let first10 = Array(self.availableVideos.prefix(10))
+        logger.info("DEBUG: availableVideos.contains('again') = \(containsAgain)")
+        logger.info("DEBUG: availableVideos.contains('\(normalized)') = \(containsNormalized)")
+        if self.availableVideos.count > 0 {
+            logger.info("DEBUG: First 10 videos: \(first10)")
+        }
         
         // EXACT match only - no partial matching to avoid wrong videos
         // (e.g., "grandfather" should NOT match "father")

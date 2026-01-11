@@ -32,6 +32,13 @@ final class SpeechRecognitionManager: ObservableObject {
     /// Current language for speech recognition
     private var currentLanguage: LanguagePreference = .english
     
+    /// Track if we've already logged error 1101 to prevent spam
+    private var hasLogged1101Error = false
+    
+    /// Retry count for speech recognition
+    private var retryCount = 0
+    private let maxRetries = 3
+    
     // MARK: - Initialization
     
     init() {
@@ -195,6 +202,10 @@ final class SpeechRecognitionManager: ObservableObject {
     func startListening() async {
         guard !isListening else { return }
         
+        // Reset error tracking
+        hasLogged1101Error = false
+        retryCount = 0
+        
         // Check if running in simulator or Mac - audio engine has compatibility issues
         if isSimulator || isRunningOnMac {
             let platform = isRunningOnMac ? "Mac" : "Simulator"
@@ -233,14 +244,33 @@ final class SpeechRecognitionManager: ObservableObject {
     
     /// Stop listening for speech
     func stopListening() {
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
+        // Stop audio engine first
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        
+        // Remove tap safely
+        let inputNode = audioEngine.inputNode
+        inputNode.removeTap(onBus: 0)
+        
+        // End recognition request
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
         
         recognitionRequest = nil
         recognitionTask = nil
         isListening = false
+        
+        // Deactivate audio session on iOS
+        #if !targetEnvironment(macCatalyst)
+        if !ProcessInfo.processInfo.isiOSAppOnMac {
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            } catch {
+                logger.warning("Failed to deactivate audio session: \(error.localizedDescription)")
+            }
+        }
+        #endif
         
         logger.info("Stopped speech recognition")
     }
@@ -258,8 +288,14 @@ final class SpeechRecognitionManager: ObservableObject {
             let audioSession = AVAudioSession.sharedInstance()
             
             do {
-                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetooth, .defaultToSpeaker])
+                // First deactivate to reset state
+                try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+                
+                // Configure for speech recognition
+                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetooth, .defaultToSpeaker, .duckOthers])
                 try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                
+                logger.info("Audio session configured successfully")
             } catch {
                 logger.error("Audio session configuration failed: \(error.localizedDescription)")
                 throw SpeechError.audioEngineError
@@ -343,11 +379,24 @@ final class SpeechRecognitionManager: ObservableObject {
                 case 1101:
                     // Speech recognition service unavailable or failed to start
                     // This can happen when the service is busy or unavailable
-                    // Log once but don't spam errors - stop listening to prevent repeated errors
-                    if self.isListening {
-                        logger.warning("Speech recognition service unavailable (1101). Stopping listener.")
-                        self.stopListening()
-                        self.error = "Speech recognition temporarily unavailable. Please try again."
+                    // Only log once to prevent spam
+                    if !hasLogged1101Error {
+                        hasLogged1101Error = true
+                        logger.warning("Speech recognition service error (1101). Attempting recovery...")
+                        
+                        // Try to restart recognition if we haven't exceeded retries
+                        if retryCount < maxRetries {
+                            retryCount += 1
+                            Task { @MainActor in
+                                self.stopListening()
+                                // Wait a moment before retrying
+                                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                                await self.startListening()
+                            }
+                        } else {
+                            self.stopListening()
+                            self.error = "Speech recognition failed. Please restart the app or try again later."
+                        }
                     }
                     return
                 case 1107:
