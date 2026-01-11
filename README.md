@@ -280,29 +280,134 @@ Detected signs are automatically translated and spoken in the user's preferred l
 
 ### Multi-Language Support & Accuracy
 
-| Language | Total Words | Translated | Accuracy | Notes |
+| Language | Total Words | With Video | Accuracy | Notes |
 |----------|-------------|------------|----------|-------|
-| **English** | 103 | 103 | **100%** | Native support |
-| **Spanish** | 103 | 77 | **75%** | Speak Spanish words |
-| **Chinese** | 103 | 78 | **76%** | Speak Mandarin words |
+| **English** | 100 | 99 | **99%** | Native support |
+| **Spanish** | 100 | 99 | **99%** | Speak Spanish words |
+| **Chinese** | 100 | 99 | **99%** | Speak Mandarin words |
 
-> 📖 **[Complete Word List →](docs/SPEECH_TO_ASL_WORDS.md)** - Full list of supported words in all languages
+### Complete Supported Words Table
 
-### Supported Word Categories (103 Words)
+| # | English | Spanish | Chinese | Video | Confidence |
+|---|---------|---------|---------|-------|------------|
+| **Greetings** |||||
+| 1 | hello | hola | 你好 | ✅ | High |
+| 2 | hi | hola | 嗨 | ✅ | High |
+| 3 | bye | adiós | 再见 | ✅ | High |
+| 4 | goodbye | adiós | 再见 | ✅ | High |
+| 5 | morning | buenos días | 早上好 | ✅ | High |
+| 6 | night | buenas noches | 晚安 | ✅ | High |
+| **Responses** |||||
+| 7 | yes | sí | 是 | ✅ | High |
+| 8 | no | no | 不 | ✅ | High |
+| 9 | maybe | quizás | 也许 | ✅ | High |
+| 10 | ok | ok | 好的 | ✅ | High |
+| 11 | please | por favor | 请 | ✅ | High |
+| 12 | sorry | lo siento | 对不起 | ✅ | High |
+| 13 | thank you | gracias | 谢谢 | ✅ | Medium* |
+| **Feelings** |||||
+| 14 | happy | feliz | 快乐 | ✅ | High |
+| 15 | sad | triste | 悲伤 | ✅ | High |
+| 16 | angry | enojado | 生气 | ✅ | High |
+| 17 | love | amor | 爱 | ✅ | High |
+| 18 | fine | bien | 很好 | ✅ | High |
+| 19 | tired | cansado | 累 | ✅ | High |
+| 20 | hungry | hambriento | 饿 | ✅ | High |
+| 21 | thirsty | sediento | 渴 | ✅ | High |
+| 22 | sick | enfermo | 生病 | ✅ | High |
+| 23 | hurt | herido | 受伤 | ✅ | High |
+| 24 | pain | dolor | 疼痛 | ✅ | High |
+| **Actions** |||||
+| 25 | help | ayuda | 帮助 | ✅ | High |
+| 26 | stop | para | 停 | ✅ | High |
+| 27 | wait | espera | 等 | ✅ | High |
+| 28 | go | ve | 去 | ✅ | High |
+| 29 | come | ven | 来 | ✅ | High |
+| 30 | sit | siéntate | 坐 | ✅ | High |
+| 31 | stand | levántate | 站 | ✅ | High |
+| 32 | open | abre | 开 | ✅ | High |
+| 33 | close | cierra | 关 | ✅ | High |
+| 34 | eat | come | 吃 | ✅ | High |
+| 35 | drink | bebe | 喝 | ✅ | High |
+| 36 | want | quiero | 想要 | ✅ | High |
+| 37 | need | necesito | 需要 | ✅ | High |
+| 38 | like | me gusta | 喜欢 | ✅ | High |
+| 39 | know | sé | 知道 | ✅ | High |
+| 40 | understand | entiendo | 明白 | ✅ | High |
+| 41 | finish | terminar | 完成 | ✅ | High |
+| 42 | done | hecho | 完成了 | ✅ | High |
+| 43 | work | trabajo | 工作 | ✅ | High |
+| **Questions** |||||
+| 44 | what | qué | 什么 | ✅ | High |
+| 45 | where | dónde | 哪里 | ✅ | High |
+| 46 | when | cuándo | 什么时候 | ✅ | High |
+| 47 | who | quién | 谁 | ✅ | High |
+| 48 | why | por qué | 为什么 | ✅ | High |
+| 49 | how | cómo | 怎么 | ✅ | High |
+| 50 | which | cuál | 哪个 | ✅ | High |
+| **People** |||||
+| 51 | family | familia | 家人 | ✅ | High |
+| 52 | friend | amigo | 朋友 | ✅ | High |
+| 53 | father | padre | 父亲 | ✅ | High |
+| 54 | mother | madre | 母亲 | ✅ | High |
+| 55 | brother | hermano | 兄弟 | ✅ | High |
+| 56 | sister | hermana | 姐妹 | ✅ | High |
+| 57 | doctor | doctor | 医生 | ✅ | High |
+| **Places** |||||
+| 58 | home | casa | 家 | ✅ | High |
+| 59 | school | escuela | 学校 | ✅ | High |
+| 60 | bathroom | baño | 洗手间 | ✅ | High |
+| **Time** |||||
+| 61 | now | ahora | 现在 | ✅ | High |
+| 62 | later | después | 稍后 | ✅ | High |
+| 63 | today | hoy | 今天 | ✅ | High |
+| 64 | tomorrow | mañana | 明天 | ✅ | High |
+| 65 | day | día | 天 | ✅ | High |
+| 66 | week | semana | 周 | ✅ | High |
+| 67 | year | año | 年 | ✅ | High |
+| 68 | again | otra vez | 再次 | ✅ | High |
+| **Numbers** |||||
+| 69 | one | uno | 一 | ✅ | High |
+| 70 | two | dos | 二 | ✅ | High |
+| 71 | three | tres | 三 | ❌ | None |
+| 72 | four | cuatro | 四 | ✅ | High |
+| 73 | five | cinco | 五 | ✅ | High |
+| 74 | six | seis | 六 | ✅ | High |
+| 75 | seven | siete | 七 | ✅ | High |
+| 76 | eight | ocho | 八 | ✅ | High |
+| 77 | nine | nueve | 九 | ✅ | High |
+| 78 | ten | diez | 十 | ✅ | High |
+| **Colors** |||||
+| 79 | red | rojo | 红色 | ✅ | High |
+| 80 | blue | azul | 蓝色 | ✅ | High |
+| 81 | green | verde | 绿色 | ✅ | High |
+| 82 | yellow | amarillo | 黄色 | ✅ | High |
+| 83 | orange | naranja | 橙色 | ✅ | High |
+| 84 | purple | morado | 紫色 | ✅ | High |
+| 85 | pink | rosa | 粉色 | ✅ | High |
+| 86 | black | negro | 黑色 | ✅ | High |
+| 87 | white | blanco | 白色 | ✅ | High |
+| 88 | brown | marrón | 棕色 | ✅ | High |
+| **Descriptions** |||||
+| 89 | good | bueno | 好 | ✅ | High |
+| 90 | bad | malo | 坏 | ✅ | High |
+| 91 | big | grande | 大 | ✅ | High |
+| 92 | small | pequeño | 小 | ✅ | High |
+| 93 | hot | caliente | 热 | ✅ | High |
+| 94 | cold | frío | 冷 | ✅ | High |
+| 95 | cool | genial | 酷 | ✅ | High |
+| 96 | more | más | 更多 | ✅ | High |
+| 97 | all | todo | 全部 | ✅ | High |
+| 98 | name | nombre | 名字 | ✅ | High |
+| 99 | water | agua | 水 | ✅ | High |
+| 100 | food | comida | 食物 | ✅ | High |
 
-| Category | Count | Examples |
-|----------|-------|----------|
-| **Greetings** | 6 | hello, hi, bye, goodbye, morning, night |
-| **Responses** | 8 | yes, no, please, sorry, thank you, ok |
-| **Feelings** | 11 | happy, sad, angry, love, tired, hungry |
-| **Actions** | 19 | help, stop, wait, go, come, eat, drink |
-| **Questions** | 7 | what, where, when, who, why, how |
-| **People** | 7 | family, father, mother, brother, sister |
-| **Places** | 3 | home, school, bathroom |
-| **Time** | 8 | now, today, tomorrow, day, week, year |
-| **Numbers** | 10 | one, two, three... ten |
-| **Colors** | 10 | red, blue, green, yellow, orange... |
-| **Descriptions** | 14 | good, bad, big, small, hot, cold |
+### Confidence Levels
+| Level | Meaning |
+|-------|---------|
+| **High** | Single word, exact match, video available |
+| **Medium*** | Multi-word phrase (e.g., "thank you" → `thank_you.mp4`) |
+| **None** | No video file available |
 
 ### Adding New Signs
 1. Create video of ASL sign (MP4/MOV/M4V)

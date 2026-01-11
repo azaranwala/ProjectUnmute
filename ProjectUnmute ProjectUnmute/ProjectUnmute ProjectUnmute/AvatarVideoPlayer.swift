@@ -7,11 +7,20 @@ import os.log
 /// Plays sign language avatar videos based on recognized speech
 struct AvatarVideoPlayer: View {
     let videoName: String?
+    let noVideoMessage: String?  // Localized message when no video available
+    let unmatchedWord: String?   // The word that has no video
     @State private var player: AVPlayer?
     @State private var isPlaying = false
     @State private var playerObserver: NSKeyValueObservation?
+    @State private var loopObserver: NSObjectProtocol?
     
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProjectUnmute", category: "AvatarPlayer")
+    
+    init(videoName: String?, noVideoMessage: String? = nil, unmatchedWord: String? = nil) {
+        self.videoName = videoName
+        self.noVideoMessage = noVideoMessage
+        self.unmatchedWord = unmatchedWord
+    }
     
     var body: some View {
         ZStack {
@@ -34,7 +43,20 @@ struct AvatarVideoPlayer: View {
                         .font(.system(size: 60))
                         .foregroundColor(.gray)
                     
-                    if let name = videoName, !name.isEmpty {
+                    if let message = noVideoMessage {
+                        // Show localized "No ASL Video available" message
+                        Text(message)
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                        
+                        // Show the word that wasn't found
+                        if let word = unmatchedWord {
+                            Text("\"\(word)\"")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(.top, 4)
+                        }
+                    } else if let name = videoName, !name.isEmpty {
                         // Video was requested but not found
                         Text("Unable to find ASL sign")
                             .font(.headline)
@@ -89,7 +111,16 @@ struct AvatarVideoPlayer: View {
     }
     
     private func loadVideo(named name: String?) {
+        // Clean up previous observers to prevent memory leaks
+        playerObserver?.invalidate()
+        playerObserver = nil
+        if let loopObs = loopObserver {
+            NotificationCenter.default.removeObserver(loopObs)
+            loopObserver = nil
+        }
+        
         guard let name = name else {
+            player?.pause()
             player = nil
             isPlaying = false
             return
@@ -170,9 +201,15 @@ struct AvatarVideoPlayer: View {
             let newPlayer = AVPlayer(playerItem: playerItem)
             newPlayer.actionAtItemEnd = .none
             
+            // Stop any existing player first
+            player?.pause()
+            
+            // Set the new player immediately so UI updates
+            player = newPlayer
+            
             // Wait for player item to be ready before playing
-            playerObserver = playerItem.observe(\.status, options: [.new]) { [self] item, _ in
-                DispatchQueue.main.async {
+            playerObserver = playerItem.observe(\.status, options: [.new, .initial]) { item, _ in
+                DispatchQueue.main.async { [self] in
                     switch item.status {
                     case .readyToPlay:
                         logger.info("Player ready - starting playback for: \(url.lastPathComponent)")
@@ -190,8 +227,8 @@ struct AvatarVideoPlayer: View {
                 }
             }
             
-            // Loop the video
-            NotificationCenter.default.addObserver(
+            // Loop the video - store observer for cleanup
+            loopObserver = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: playerItem,
                 queue: .main
@@ -199,8 +236,6 @@ struct AvatarVideoPlayer: View {
                 newPlayer.seek(to: .zero)
                 newPlayer.play()
             }
-            
-            player = newPlayer
             
             // Also try to play immediately in case it's already ready
             if playerItem.status == .readyToPlay {
@@ -224,11 +259,22 @@ final class AvatarVideoManager: ObservableObject {
     
     @Published private(set) var currentVideoName: String?
     @Published private(set) var availableVideos: [String] = []
+    @Published private(set) var noVideoAvailable: Bool = false  // True when word has no matching video
+    @Published private(set) var lastRequestedWord: String?  // The word that was requested
     
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProjectUnmute", category: "AvatarManager")
     
     init() {
         scanAvatarAssets()
+        logger.info("AvatarVideoManager initialized with \(self.availableVideos.count) videos")
+    }
+    
+    /// Force re-scan of avatar assets (useful if initial scan failed)
+    func rescanIfNeeded() {
+        if availableVideos.isEmpty {
+            logger.info("Re-scanning avatar assets...")
+            scanAvatarAssets()
+        }
     }
     
     /// Scan the AvatarAssets folder for available videos
@@ -291,27 +337,40 @@ final class AvatarVideoManager: ObservableObject {
         // EXACT match only - no partial matching to avoid wrong videos
         // (e.g., "grandfather" should NOT match "father")
         
+        // Re-scan if empty (might have failed on init)
+        if availableVideos.isEmpty {
+            scanAvatarAssets()
+        }
+        
+        lastRequestedWord = phrase
+        noVideoAvailable = false
+        
         // Check if video exists in our list (exact match)
         if availableVideos.contains(normalized) {
             currentVideoName = normalized
+            noVideoAvailable = false
             logger.info("Playing avatar video: \(normalized)")
         } else if availableVideos.contains(normalized.replacingOccurrences(of: "_", with: " ")) {
             // Try with spaces instead of underscores
             let withSpaces = normalized.replacingOccurrences(of: "_", with: " ")
             currentVideoName = withSpaces
+            noVideoAvailable = false
             logger.info("Playing avatar video (with spaces): \(withSpaces)")
         } else if availableVideos.contains(normalized.replacingOccurrences(of: " ", with: "_")) {
             // Try with underscores instead of spaces
             let withUnderscores = normalized.replacingOccurrences(of: " ", with: "_")
             currentVideoName = withUnderscores
+            noVideoAvailable = false
             logger.info("Playing avatar video (with underscores): \(withUnderscores)")
         } else if availableVideos.isEmpty {
             // If no videos were scanned, try playing anyway (scan might have failed)
             currentVideoName = normalized
+            noVideoAvailable = false
             logger.info("No videos scanned, trying to play: \(normalized)")
         } else {
-            // NO partial matching - set to nil to show "Unable to find ASL sign"
+            // NO partial matching - show "No ASL Video available" message
             currentVideoName = nil
+            noVideoAvailable = true
             logger.warning("No avatar video found for: '\(phrase)' (normalized: '\(normalized)')")
         }
     }
@@ -319,6 +378,28 @@ final class AvatarVideoManager: ObservableObject {
     /// Stop current video
     func stopVideo() {
         currentVideoName = nil
+        noVideoAvailable = false
+        lastRequestedWord = nil
+    }
+    
+    /// Show "No ASL sign found" message for a word that has no video
+    func showNoVideoMessage(for word: String) {
+        logger.info("Showing 'No ASL sign found' for word: '\(word)'")
+        currentVideoName = nil  // Stop any playing video
+        lastRequestedWord = word
+        noVideoAvailable = true
+    }
+    
+    /// Get localized "No ASL Video available" message
+    /// Pass languageCode: e.g., "en-US", "es-ES", "zh-Hans-CN"
+    func noVideoMessage(languageCode: String) -> String {
+        if languageCode.hasPrefix("es") {
+            return "No hay video ASL disponible"
+        } else if languageCode.hasPrefix("zh") {
+            return "没有可用的ASL视频"
+        } else {
+            return "No ASL Video available"
+        }
     }
 }
 

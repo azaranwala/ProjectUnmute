@@ -16,6 +16,7 @@ final class SpeechRecognitionManager: ObservableObject {
     @Published private(set) var error: String?
     @Published private(set) var lastRecognizedWord: String?
     @Published private(set) var matchedAvatarVideo: String?
+    @Published private(set) var unmatchedWord: String?  // Word spoken but no video found
     
     // MARK: - Private Properties
     
@@ -37,7 +38,10 @@ final class SpeechRecognitionManager: ObservableObject {
     
     /// Retry count for speech recognition
     private var retryCount = 0
-    private let maxRetries = 3
+    private let maxRetries = 5
+    
+    /// Track if this is the first start (needs longer delay)
+    private var isFirstStart = true
     
     // MARK: - Initialization
     
@@ -204,7 +208,14 @@ final class SpeechRecognitionManager: ObservableObject {
         
         // Reset error tracking
         hasLogged1101Error = false
-        retryCount = 0
+        
+        // On first start, add a longer delay to let the system initialize
+        if isFirstStart {
+            isFirstStart = false
+            retryCount = 0  // Reset retry count on first start
+            logger.info("First start - waiting for system to initialize...")
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay on first start
+        }
         
         // Check if running in simulator or Mac - audio engine has compatibility issues
         if isSimulator || isRunningOnMac {
@@ -291,9 +302,16 @@ final class SpeechRecognitionManager: ObservableObject {
                 // First deactivate to reset state
                 try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
                 
-                // Configure for speech recognition
-                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetooth, .defaultToSpeaker, .duckOthers])
+                // Small delay to let audio system settle
+                try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                
+                // Configure for speech recognition - use .default mode instead of .measurement
+                // .measurement mode can cause issues on some devices
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetooth, .defaultToSpeaker, .mixWithOthers])
                 try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                
+                // Another small delay after activation
+                try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
                 
                 logger.info("Audio session configured successfully")
             } catch {
@@ -313,7 +331,18 @@ final class SpeechRecognitionManager: ObservableObject {
         }
         
         recognitionRequest.shouldReportPartialResults = true
-        recognitionRequest.requiresOnDeviceRecognition = false // Use server for better accuracy
+        recognitionRequest.addsPunctuation = false  // Reduce processing overhead
+        recognitionRequest.taskHint = .dictation    // Optimize for dictation
+        
+        // Use on-device recognition (user preference)
+        if speechRecognizer?.supportsOnDeviceRecognition == true {
+            recognitionRequest.requiresOnDeviceRecognition = true
+            logger.info("Using on-device speech recognition")
+        } else {
+            // Fall back to server only if on-device not available at all
+            recognitionRequest.requiresOnDeviceRecognition = false
+            logger.warning("On-device recognition not available, falling back to server")
+        }
         
         // Get input node
         let inputNode = audioEngine.inputNode
@@ -358,6 +387,9 @@ final class SpeechRecognitionManager: ObservableObject {
         audioEngine.prepare()
         try audioEngine.start()
         
+        // Wait for audio engine to stabilize before starting recognition
+        try await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+        
         // Start recognition task
         recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
             Task { @MainActor in
@@ -379,23 +411,31 @@ final class SpeechRecognitionManager: ObservableObject {
                 case 1101:
                     // Speech recognition service unavailable or failed to start
                     // This can happen when the service is busy or unavailable
-                    // Only log once to prevent spam
-                    if !hasLogged1101Error {
-                        hasLogged1101Error = true
-                        logger.warning("Speech recognition service error (1101). Attempting recovery...")
+                    // Try to restart recognition if we haven't exceeded retries
+                    let currentRetry = self.retryCount
+                    let maxRetryCount = self.maxRetries
+                    
+                    if currentRetry < maxRetryCount {
+                        self.retryCount += 1
+                        let delaySeconds = Double(self.retryCount) * 0.5 // Increasing delay: 0.5s, 1s, 1.5s, etc.
+                        if !self.hasLogged1101Error {
+                            self.hasLogged1101Error = true
+                            logger.warning("Speech recognition error (1101). Retry \(self.retryCount)/\(maxRetryCount) in \(delaySeconds)s...")
+                        }
                         
-                        // Try to restart recognition if we haven't exceeded retries
-                        if retryCount < maxRetries {
-                            retryCount += 1
-                            Task { @MainActor in
-                                self.stopListening()
-                                // Wait a moment before retrying
-                                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                                await self.startListening()
-                            }
-                        } else {
+                        Task { @MainActor in
                             self.stopListening()
-                            self.error = "Speech recognition failed. Please restart the app or try again later."
+                            // Wait with increasing delay before retrying
+                            try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
+                            self.hasLogged1101Error = false // Reset so we can log next retry
+                            await self.startListening()
+                        }
+                    } else {
+                        if !self.hasLogged1101Error {
+                            self.hasLogged1101Error = true
+                            logger.error("Speech recognition failed after \(maxRetryCount) retries")
+                            self.stopListening()
+                            self.error = "Speech recognition unavailable. Please check your internet connection and try again."
                         }
                     }
                     return
@@ -423,10 +463,21 @@ final class SpeechRecognitionManager: ObservableObject {
             lastRecognizedWord = lastWord
             
             // Check for matching avatar video - prioritize the LAST word first
-            // Only update if it's a NEW match to avoid replaying the same video
-            if let videoFile = videoFilename(for: lastWord), videoFile != matchedAvatarVideo {
-                matchedAvatarVideo = videoFile
-                logger.info("Matched avatar video: \(videoFile) for word: \(lastWord)")
+            if let videoFile = videoFilename(for: lastWord) {
+                // Only update if it's a NEW match to avoid replaying the same video
+                if videoFile != matchedAvatarVideo {
+                    unmatchedWord = nil  // Clear unmatched state
+                    matchedAvatarVideo = videoFile
+                    logger.info("Matched avatar video: \(videoFile) for word: \(lastWord)")
+                }
+            } else {
+                // No video found for this word - trigger "No ASL sign found" message
+                // Only update if it's a new unmatched word
+                if lastWord != unmatchedWord {
+                    matchedAvatarVideo = nil  // Clear any previous match
+                    unmatchedWord = lastWord
+                    logger.info("No video for word: \(lastWord) - showing 'No ASL sign found'")
+                }
             }
         }
         
@@ -441,6 +492,7 @@ final class SpeechRecognitionManager: ObservableObject {
         transcribedText = ""
         lastRecognizedWord = nil
         matchedAvatarVideo = nil
+        unmatchedWord = nil
     }
     
     /// Simulate speech input (for testing without microphone)
@@ -471,8 +523,14 @@ final class SpeechRecognitionManager: ObservableObject {
         
         // Also check the full phrase
         if let videoFile = videoFilename(for: text) {
+            unmatchedWord = nil
             matchedAvatarVideo = videoFile
             logger.info("Simulated phrase matched video: \(videoFile)")
+        } else {
+            // No match found - show "No ASL sign found"
+            matchedAvatarVideo = nil
+            unmatchedWord = text
+            logger.info("No video for simulated speech: \(text)")
         }
     }
 }

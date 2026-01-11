@@ -94,6 +94,13 @@ struct ContentView: View {
                     avatarManager.playVideo(for: name)
                 }
             }
+            .onChange(of: speechManager.unmatchedWord) { _, word in
+                if let unmatchedWord = word {
+                    // Word spoken but no video found - show "No ASL sign found"
+                    showAvatarView = true
+                    avatarManager.showNoVideoMessage(for: unmatchedWord)
+                }
+            }
             .onChange(of: communicationMode) { _, newMode in
                 // Stop everything when switching modes
                 avatarManager.stopVideo()
@@ -156,7 +163,11 @@ struct ContentView: View {
     private var speechToASLView: some View {
         VStack(spacing: 0) {
             // Avatar video view - shows ASL signs for spoken words
-            AvatarVideoPlayer(videoName: avatarManager.currentVideoName)
+            AvatarVideoPlayer(
+                videoName: avatarManager.currentVideoName,
+                noVideoMessage: avatarManager.noVideoAvailable ? avatarManager.noVideoMessage(languageCode: languageSettings.selectedLanguage.rawValue) : nil,
+                unmatchedWord: avatarManager.noVideoAvailable ? avatarManager.lastRequestedWord : nil
+            )
                 .frame(height: UIScreen.main.bounds.height * 0.45)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
@@ -178,8 +189,16 @@ struct ContentView: View {
                     .padding(.horizontal)
             }
             
+            // Show "No ASL Video" message with the requested word
+            if avatarManager.noVideoAvailable, let word = avatarManager.lastRequestedWord {
+                Text("❌ \"\(word)\"")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .padding(.horizontal)
+            }
+            
             // Debug: Show matched video
-            if let matched = speechManager.matchedAvatarVideo {
+            if let matched = speechManager.matchedAvatarVideo, !avatarManager.noVideoAvailable {
                 Text("🎬 Playing: \(matched)")
                     .font(.caption)
                     .foregroundColor(.green)
@@ -191,6 +210,8 @@ struct ContentView: View {
         // NOTE: onChange for matchedAvatarVideo is handled in parent NavigationStack
         .onAppear {
             // Auto-start speech recognition when Speech → ASL view appears
+            // Also ensure videos are scanned
+            avatarManager.rescanIfNeeded()
             Task {
                 await speechManager.startListening()
             }
