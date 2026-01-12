@@ -259,13 +259,46 @@ These 9 signs are specifically tuned for **consistent, non-overlapping detection
 
 ### 🗂️ Dataset & Training
 
+#### Training Datasets
+
+The ML model was trained using multiple publicly available ASL datasets:
+
+| # | Dataset | Samples | Classes | Description | Source |
+|---|---------|---------|---------|-------------|--------|
+| 1 | **WLASL** | ~50,000+ | 100-2000 | Word-Level American Sign Language video dataset | [GitHub](https://github.com/dxli94/WLASL) |
+| 2 | **WLASL Full** | ~500,000+ | 2,000 | Complete WLASL with all sign variations | [GitHub](https://github.com/dxli94/WLASL) |
+| 3 | **ASL Citizen** | ~100,000+ | 2,731 | Community-contributed signs from 52 deaf signers | [Microsoft Research](https://www.microsoft.com/en-us/research/project/asl-citizen/) |
+| 4 | **Kaggle ASL Alphabet** | ~20,000+ | 26 (A-Z) | Fingerspelling alphabet dataset | [Kaggle](https://www.kaggle.com/datasets/grassknoted/asl-alphabet) |
+| 5 | **Combined ASL** | ~60,000+ | Mixed | Merged dataset from multiple sources | Custom |
+| 6 | **Custom Collected** | ~12,000+ | 50+ | Hand-collected samples for specific signs | In-house |
+
+#### Dataset Sources
+
+**WLASL (Word-Level American Sign Language)**
+- 2,000 ASL glosses with video instances
+- Multiple signers performing each sign
+- Subset configs: `nslt_100.json`, `nslt_300.json`, `nslt_1000.json`, `nslt_2000.json`
+
+**ASL Citizen**
+- Microsoft Research dataset
+- 83,399 video samples across 2,731 signs
+- Recorded by 52 Deaf ASL signers
+- High diversity in signing styles
+
+**Kaggle ASL Alphabet**
+- 87,000 images of 26 ASL letters (A-Z)
+- Static hand poses for fingerspelling
+
+#### Model Architecture
+
 | Component | Details |
 |-----------|--------|
-| **Hand Landmark Model** | MediaPipe Hand Landmarker (21 landmarks, 63 features) |
+| **Hand Landmark Model** | MediaPipe Hand Landmarker (21 landmarks) |
 | **ML Classifier** | Centroid-based classifier with EMA smoothing |
-| **Training Data** | `ASLModelData.json` (229 sign classes) |
+| **Training Output** | `ASLModelData.json` (229 sign classes) |
 | **Feature Vector** | 63 floats (x, y, z for each of 21 landmarks) |
-| **Coordinate System** | Normalized 0-1, X-mirrored for consistency across cameras |
+| **Normalization** | Wrist-centered, scale-normalized, X-mirrored |
+| **Confidence Threshold** | 80% minimum for sign confirmation |
 
 ---
 
