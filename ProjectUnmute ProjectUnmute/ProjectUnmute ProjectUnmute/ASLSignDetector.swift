@@ -48,6 +48,11 @@ final class ASLSignDetector: ObservableObject {
     private var stableSignCount: Int = 0
     private let stabilityThreshold: Int = 8 // Require 8 consecutive frames (increased to prevent double detection)
     
+    // Speech cooldown to prevent rapid re-speaking of same sign
+    private var lastSpokenSign: String?
+    private var lastSpokenTime: Date?
+    private let speakCooldown: TimeInterval = 1.3 // 1.3 seconds between speaking same sign
+    
     // MARK: - Hand Landmark Indices (MediaPipe standard)
     
     private struct LM {
@@ -117,8 +122,23 @@ final class ASLSignDetector: ObservableObject {
         }
         
         // PRIORITY 2: Try ML classifier for static signs if enabled and loaded
-        // FILTER: Only allow our 9 supported signs (NO is disabled, PLEASE is enabled)
-        let allowedSigns: Set<String> = ["YES", "PLEASE", "GOOD", "PEACE", "STOP", "HELLO", "BYE", "THANK YOU", "THANKYOU", "I LOVE YOU", "ILOVEYOU"]
+        // FILTER: Allow 30 supported signs (expanded vocabulary)
+        let allowedSigns: Set<String> = [
+            // Greetings & Social (6)
+            "HELLO", "GOODBYE", "THANK_YOU", "THANKYOU", "PLEASE", "SORRY",
+            // Responses (2)
+            "YES", "NO",
+            // Essential Actions (10)
+            "HELP", "STOP", "WANT", "NEED", "GO", "WAIT", "FINISH", "DONE", "EAT", "DRINK",
+            // Descriptions (4)
+            "GOOD", "BAD", "HOT", "COLD",
+            // Places (4)
+            "BATHROOM", "HOME", "SCHOOL", "WORK",
+            // Health & State (4)
+            "DOCTOR", "HURT", "HUNGRY", "TIRED",
+            // Keep original aliases for backwards compatibility
+            "THANK YOU", "BYE", "WATER"
+        ]
         
         if useMLClassifier && ASLModelClassifier.shared.isModelLoaded {
             // Flatten landmarks to 63 features for ML model
@@ -411,6 +431,18 @@ final class ASLSignDetector: ObservableObject {
     
     /// Speak a single sign through Bluetooth (Meta Glasses speakers)
     private func speakSign(_ sign: String) {
+        // Speech cooldown: prevent rapid re-speaking of the same sign
+        if let lastSign = lastSpokenSign, let lastTime = lastSpokenTime,
+           lastSign.uppercased() == sign.uppercased(),
+           Date().timeIntervalSince(lastTime) < speakCooldown {
+            logger.info("⏳ Speech cooldown: skipping '\(sign)' (spoken \(String(format: "%.1f", Date().timeIntervalSince(lastTime)))s ago)")
+            return
+        }
+        
+        // Update speech tracking
+        lastSpokenSign = sign
+        lastSpokenTime = Date()
+        
         // Use the shared SpeechSynthesizer for Bluetooth routing
         // This ensures audio goes to Meta Glasses if connected
         

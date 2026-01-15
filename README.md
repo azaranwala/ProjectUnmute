@@ -163,41 +163,88 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 ##  ASL Sign Recognition
 
 ### Overview
-The app uses a **hybrid detection system** combining motion-based detection, rule-based static sign detection, and ML classification. The system supports **9 primary ASL signs** optimized for reliable detection across all camera sources, with **multi-language output** (English, Spanish, Chinese).
+The app uses a **hybrid detection system** combining motion-based detection, rule-based static sign detection, and ML classification. The system supports **30 ASL signs** optimized for reliable detection across all camera sources, with **multi-language output** (English, Spanish, Chinese).
 
 ---
 
-### 🎯 Primary ASL Signs (9 Optimized Signs)
+### 🎯 Supported ASL Signs (30 Signs)
 
-These 9 signs are specifically tuned for **consistent, non-overlapping detection** across iPhone Front Camera, Back Camera, and Meta Glasses.
+These 30 signs are specifically tuned for **consistent, non-overlapping detection** across iPhone Front Camera, Back Camera, and Meta Glasses.
 
-| # | Sign | Detection Method | How to Perform | Confidence | English | Spanish | Chinese |
-|---|------|-----------------|----------------|------------|---------|---------|--------|
-| 1 | **YES** | Motion (MotionSignDetector) | Closed fist, pump up/down vertically | 80-90% | Yes | Sí | 是 |
-| 2 | **PLEASE** | Motion (MotionSignDetector) | Open hand on chest, rub in circles or back-and-forth | 80-85% | Please | Por favor | 请 |
-| 3 | **GOOD** | Motion + Static | Thumbs up OR flat hand chin→down | 85-92% | Good | Bueno | 好 |
-| 4 | **PEACE** | Static (Rule-based) | Index + middle fingers extended (V sign), thumb curled | 85-88% | Peace | Paz | 和平 |
-| 5 | **STOP** | Static (Rule-based) | Open palm facing forward, fingers together | 85-90% | Stop | Para | 停 |
-| 6 | **BYE** | Motion (MotionSignDetector) | Open hand, wave side-to-side (1+ cycle) | 80-85% | Bye | Adiós | 再见 |
-| 7 | **HELLO** | Motion (MotionSignDetector) | Open hand, single horizontal sweep outward | 80-85% | Hello | Hola | 你好 |
-| 8 | **THANK YOU** | Motion (MotionSignDetector) | Open hand at chin, move downward | 80-85% | Thank You | Gracias | 谢谢 |
-| 9 | **I LOVE YOU** | Static (Rule-based) | Thumb + index + pinky extended (🤟) | 90-95% | I Love You | Te quiero | 我爱你 |
+#### Greetings & Social (6 signs)
+| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
+|---|------|-----------------|------------|---------|---------|--------|
+| 1 | **HELLO** | Motion + ML | 80-88% | Hello | Hola | 你好 |
+| 2 | **GOODBYE** | ML Classifier | 80% | Goodbye | Adiós | 再见 |
+| 3 | **THANK_YOU** | Motion + ML | 80-85% | Thank You | Gracias | 谢谢 |
+| 4 | **PLEASE** | Motion + ML | 80-85% | Please | Por favor | 请 |
+| 5 | **SORRY** | ML Classifier | 80% | Sorry | Lo siento | 对不起 |
+| 6 | **BYE** | Motion | 80-85% | Bye | Adiós | 再见 |
+
+#### Responses (2 signs)
+| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
+|---|------|-----------------|------------|---------|---------|--------|
+| 7 | **YES** | Motion + ML | 80-90% | Yes | Sí | 是 |
+| 8 | **NO** | ML Classifier | 80% | No | No | 不 |
+
+#### Essential Actions (10 signs)
+| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
+|---|------|-----------------|------------|---------|---------|--------|
+| 9 | **HELP** | ML Classifier | 80% | Help | Ayuda | 帮助 |
+| 10 | **STOP** | Motion + ML | 85-90% | Stop | Para | 停 |
+| 11 | **WANT** | ML Classifier | 80% | Want | Quiero | 想要 |
+| 12 | **NEED** | ML Classifier | 80% | Need | Necesito | 需要 |
+| 13 | **GO** | ML Classifier | 80% | Go | Ve | 去 |
+| 14 | **WAIT** | ML Classifier | 80% | Wait | Espera | 等 |
+| 15 | **FINISH** | ML Classifier | 80% | Finish | Terminar | 完成 |
+| 16 | **DONE** | ML Classifier | 80% | Done | Hecho | 完成了 |
+| 17 | **EAT** | ML Classifier | 80% | Eat | Come | 吃 |
+| 18 | **DRINK** | ML Classifier | 80% | Drink | Bebe | 喝 |
+
+#### Descriptions (4 signs)
+| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
+|---|------|-----------------|------------|---------|---------|--------|
+| 19 | **GOOD** | Motion + ML | 85-92% | Good | Bueno | 好 |
+| 20 | **BAD** | ML Classifier | 80% | Bad | Malo | 坏 |
+| 21 | **HOT** | ML Classifier | 80% | Hot | Caliente | 热 |
+| 22 | **COLD** | ML Classifier | 80% | Cold | Frío | 冷 |
+
+#### Places (4 signs)
+| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
+|---|------|-----------------|------------|---------|---------|--------|
+| 23 | **BATHROOM** | ML Classifier | 80% | Bathroom | Baño | 洗手间 |
+| 24 | **HOME** | ML Classifier | 80% | Home | Casa | 家 |
+| 25 | **SCHOOL** | ML Classifier | 80% | School | Escuela | 学校 |
+| 26 | **WORK** | ML Classifier | 80% | Work | Trabajo | 工作 |
+
+#### Health & State (4 signs)
+| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
+|---|------|-----------------|------------|---------|---------|--------|
+| 27 | **DOCTOR** | ML Classifier | 80% | Doctor | Doctor | 医生 |
+| 28 | **HURT** | ML Classifier | 80% | Hurt | Herido | 受伤 |
+| 29 | **HUNGRY** | ML Classifier | 80% | Hungry | Hambriento | 饿 |
+| 30 | **TIRED** | ML Classifier | 80% | Tired | Cansado | 累 |
+
+#### Additional Motion-Based Signs
+| Sign | Detection Method | Confidence | Notes |
+|------|-----------------|------------|-------|
+| **PEACE** | Static (Rule-based) | 85-90% | V-sign, thumb curled |
+| **I LOVE YOU** | Static (Rule-based) | 90-95% | Thumb + index + pinky (🤟) |
+| **WATER** | ML Classifier | 80% | W-hand near mouth |
 
 ---
 
 ### 📱 Camera Compatibility Matrix
 
-| Sign | iPhone Front | iPhone Back | Meta Glasses | Notes |
-|------|:------------:|:-----------:|:------------:|-------|
-| **YES** | ✅ High | ✅ High | ✅ High | Fist + vertical motion |
-| **PLEASE** | ✅ High | ✅ High | ✅ High | Rubbing/circular motion |
-| **GOOD** | ✅ High | ✅ High | ✅ High | Thumbs up |
-| **PEACE** | ✅ High | ✅ High | ✅ High | V-sign, thumb must be curled |
-| **STOP** | ✅ High | ✅ High | ✅ High | Open palm |
-| **BYE** | ✅ High | ✅ High | ✅ High | Waving motion |
-| **HELLO** | ✅ High | ✅ High | ✅ High | Single sweep |
-| **THANK YOU** | ✅ High | ✅ High | ✅ High | Chin to down motion |
-| **I LOVE YOU** | ✅ High | ✅ High | ✅ High | Static 3-finger hold |
+| Category | Signs | iPhone Front | iPhone Back | Meta Glasses |
+|----------|-------|:------------:|:-----------:|:------------:|
+| **Greetings** | HELLO, GOODBYE, THANK_YOU, PLEASE, SORRY, BYE | ✅ High | ✅ High | ✅ High |
+| **Responses** | YES, NO | ✅ High | ✅ High | ✅ High |
+| **Actions** | HELP, STOP, WANT, NEED, GO, WAIT, FINISH, DONE, EAT, DRINK | ✅ High | ✅ High | ✅ High |
+| **Descriptions** | GOOD, BAD, HOT, COLD | ✅ High | ✅ High | ✅ High |
+| **Places** | BATHROOM, HOME, SCHOOL, WORK | ✅ High | ✅ High | ✅ High |
+| **Health** | DOCTOR, HURT, HUNGRY, TIRED | ✅ High | ✅ High | ✅ High |
+| **Static** | PEACE, I LOVE YOU, WATER | ✅ High | ✅ High | ✅ High |
 
 **Detection Quality Summary:**
 | Camera Source | Quality | Best For |
