@@ -42,16 +42,18 @@ final class ASLSignDetector: ObservableObject {
     
     private var lastDetectedSign: String?
     private var signHoldStartTime: Date?
-    private let holdDurationRequired: TimeInterval = 1.0 // Hold sign for 1 second to confirm
+    private let holdDurationRequired: TimeInterval = 1.5 // Hold sign for 1.5 seconds to confirm
     private var signHistory: [String] = []
     private var stableSign: String? // For stabilization
     private var stableSignCount: Int = 0
-    private let stabilityThreshold: Int = 8 // Require 8 consecutive frames (increased to prevent double detection)
+    private let stabilityThreshold: Int = 15 // Require 15 consecutive frames for consistent detection
+    private var lastConfirmedTime: Date? // Track when last sign was confirmed
+    private let transitionCooldown: TimeInterval = 2.0 // Wait 2 seconds after confirming before new sign
     
     // Speech cooldown to prevent rapid re-speaking of same sign
     private var lastSpokenSign: String?
     private var lastSpokenTime: Date?
-    private let speakCooldown: TimeInterval = 1.3 // 1.3 seconds between speaking same sign
+    private let speakCooldown: TimeInterval = 2.5 // 2.5 seconds between speaking same sign
     
     // MARK: - Hand Landmark Indices (MediaPipe standard)
     
@@ -102,20 +104,33 @@ final class ASLSignDetector: ObservableObject {
         
         isDetecting = true
         
+        // TRANSITION COOLDOWN: Prevent rapid sign changes during transitions
+        let language = LanguageSettingsManager.shared.selectedLanguage
+        if let lastConfirmed = lastConfirmedTime {
+            let timeSinceConfirm = Date().timeIntervalSince(lastConfirmed)
+            if timeSinceConfirm < transitionCooldown {
+                // Still in cooldown - show waiting message (translated)
+                self.detectedSign = language.readyForNextSignMessage
+                print("⏳ TRANSITION COOLDOWN: \(String(format: "%.1f", transitionCooldown - timeSinceConfirm))s remaining")
+                return
+            }
+        }
+        
         // PRIORITY 1: Check for motion-based dynamic signs (HELLO, THANK YOU, YES, NO, I LOVE YOU, etc.)
         // These signs require tracking movement over multiple frames
         if let motionResult = MotionSignDetector.shared.processFrame(landmarks: landmarks) {
             if motionResult.isComplete {
-                // Motion sign completed - confirm immediately (skip hold requirement)
+                // Motion sign completed - confirm with translated sign
+                let translatedSign = language.translatedPhrase(for: motionResult.sign)
                 confirmSign(motionResult.sign)
                 self.confidence = motionResult.confidence
-                self.detectedSign = motionResult.sign
-                print("✅ ASL CONFIRMED: \(motionResult.sign) (confidence: \(String(format: "%.0f", motionResult.confidence * 100))%)")
+                self.detectedSign = translatedSign
+                print("✅ ASL CONFIRMED: \(motionResult.sign) → \(translatedSign) (confidence: \(String(format: "%.0f", motionResult.confidence * 100))%)")
                 return
             } else if motionResult.confidence >= 0.5 {
-                // Motion in progress - show stabilizing message
+                // Motion in progress - show stabilizing message (translated)
                 self.confidence = motionResult.confidence
-                self.detectedSign = "ASL Detection in Progress..."
+                self.detectedSign = language.detectionInProgressMessage
                 print("🔄 ASL STABILIZING: \(motionResult.sign) (confidence: \(String(format: "%.0f", motionResult.confidence * 100))%)")
                 return
             }
@@ -137,7 +152,9 @@ final class ASLSignDetector: ObservableObject {
             // Gestures (ML + Motion)
             "PEACE", "ILY", "ILOVEYOU", "I LOVE YOU", "I_LOVE_YOU",
             // Actions (Motion)
-            "STOP", "GOOD"
+            "STOP", "GOOD",
+            // Communication (ML model)
+            "DONT_UNDERSTAND", "DONTUNDERSTAND", "DON'T UNDERSTAND"
         ]
         
         if useMLClassifier && ASLModelClassifier.shared.isModelLoaded {
@@ -156,8 +173,8 @@ final class ASLSignDetector: ObservableObject {
                 // FILTER: Ignore signs not in our allowed list
                 let normalizedSign = result.sign.uppercased().replacingOccurrences(of: " ", with: "")
                 guard allowedSigns.contains(result.sign.uppercased()) || allowedSigns.contains(normalizedSign) else {
-                    // Sign not in allowed list - show unable to recognize
-                    self.detectedSign = "Unable to recognize ASL sign with high confidence"
+                    // Sign not in allowed list - show detecting message (translated)
+                    self.detectedSign = language.unableToRecognizeMessage
                     self.confidence = 0
                     print("⚠️ ASL FILTERED: '\(result.sign)' not in allowed signs list")
                     return
@@ -173,23 +190,27 @@ final class ASLSignDetector: ObservableObject {
                         stableSignCount = 1
                     }
                     
-                    // Only process if sign is stable (5+ consecutive frames)
+                    // Only process if sign is stable (15+ consecutive frames)
                     if stableSignCount >= stabilityThreshold {
+                        // Show the detected sign translated to user's language
+                        let translatedSign = language.translatedPhrase(for: result.sign)
                         handleDetectedSign(result.sign, confidence: result.confidence)
-                        print("✅ ASL CONFIRMED: \(result.sign) (confidence: \(String(format: "%.0f", result.confidence * 100))%)")
+                        self.detectedSign = translatedSign
+                        print("✅ ASL CONFIRMED: \(result.sign) → \(translatedSign) (confidence: \(String(format: "%.0f", result.confidence * 100))%)")
                     } else {
-                        // Show stabilizing message
+                        // Show stabilizing message with detected sign (translated)
                         self.confidence = result.confidence
-                        self.detectedSign = "ASL Detection in Progress..."
+                        let translatedSign = language.translatedPhrase(for: result.sign)
+                        self.detectedSign = "\(language.detectionInProgressMessage) (\(translatedSign))"
                         print("🔄 ASL STABILIZING: \(result.sign) (\(stableSignCount)/\(stabilityThreshold) frames)")
                     }
                     return
                 } else {
-                    // Below 80% - do not recognize (unified threshold)
+                    // Below 80% - show detecting message (translated)
                     stableSign = nil
                     stableSignCount = 0
                     self.confidence = result.confidence
-                    self.detectedSign = "Unable to recognize ASL sign with high confidence"
+                    self.detectedSign = language.unableToRecognizeMessage
                     print("⚠️ ASL LOW CONF: \(result.sign) (\(String(format: "%.0f", result.confidence * 100))% < 80%)")
                     return
                 }
@@ -216,6 +237,10 @@ final class ASLSignDetector: ObservableObject {
     /// This is the main entry point for real-time sign detection
     func processFrame(_ frame: CGImage) {
         // Use .up orientation for all cameras - coordinate mirroring is handled in extractLandmarks
+        // Log camera source occasionally for debugging
+        if Int.random(in: 0..<100) == 0 {
+            print("📷 Processing frame: \(frame.width)x\(frame.height), frontCamera=\(isUsingFrontCamera)")
+        }
         let handler = VNImageRequestHandler(cgImage: frame, orientation: .up, options: [:])
         
         do {
@@ -403,6 +428,13 @@ final class ASLSignDetector: ObservableObject {
     private func confirmSign(_ sign: String) {
         // Notify motion detector of confirmation to trigger cooldown
         MotionSignDetector.shared.signConfirmed(sign)
+        
+        // Set transition cooldown timestamp
+        lastConfirmedTime = Date()
+        
+        // Reset stabilization state
+        stableSign = nil
+        stableSignCount = 0
         
         // Avoid adding the same sign twice in a row
         if signHistory.last != sign {

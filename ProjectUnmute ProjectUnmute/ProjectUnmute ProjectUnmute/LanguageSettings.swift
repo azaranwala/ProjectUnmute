@@ -45,6 +45,44 @@ enum LanguagePreference: String, CaseIterable, Identifiable {
         }
     }
     
+    // MARK: - UI Status Messages
+    
+    /// "ASL Detection in Progress" message
+    var detectionInProgressMessage: String {
+        switch self {
+        case .english: return "ASL Detection in Progress..."
+        case .spanish: return "Detección ASL en progreso..."
+        case .mandarin: return "ASL检测进行中..."
+        }
+    }
+    
+    /// "Ready for next sign" message (during cooldown)
+    var readyForNextSignMessage: String {
+        switch self {
+        case .english: return "Ready for next sign..."
+        case .spanish: return "Listo para la siguiente seña..."
+        case .mandarin: return "准备下一个手语..."
+        }
+    }
+    
+    /// "Unable to recognize" message (low confidence)
+    var unableToRecognizeMessage: String {
+        switch self {
+        case .english: return "Detecting..."
+        case .spanish: return "Detectando..."
+        case .mandarin: return "检测中..."
+        }
+    }
+    
+    /// "Waiting for hand" message
+    var waitingForHandMessage: String {
+        switch self {
+        case .english: return "Show your hand to start"
+        case .spanish: return "Muestre su mano para comenzar"
+        case .mandarin: return "请出示您的手"
+        }
+    }
+    
     /// Common words mapping - maps English ASL signs to translated phrases
     func translatedPhrase(for englishSign: String) -> String {
         let sign = englishSign.lowercased()

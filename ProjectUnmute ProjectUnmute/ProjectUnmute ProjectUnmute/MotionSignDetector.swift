@@ -303,6 +303,20 @@ final class MotionSignDetector {
             isPinky: true
         )
         
+        // Debug logging for finger state detection (occasional)
+        if Int.random(in: 0..<20) == 0 {
+            let indexTip = landmarks[LM.indexTip]
+            let indexPip = landmarks[LM.indexPIP]
+            let pinkyTip = landmarks[LM.pinkyTip]
+            let pinkyPip = landmarks[LM.pinkyPIP]
+            let count = (thumbExtended ? 1 : 0) + (indexExtended ? 1 : 0) + (middleExtended ? 1 : 0) + (ringExtended ? 1 : 0) + (pinkyExtended ? 1 : 0)
+            print("🖐️ FINGERS: T=\(thumbExtended ? "✓" : "✗") I=\(indexExtended ? "✓" : "✗") M=\(middleExtended ? "✓" : "✗") R=\(ringExtended ? "✓" : "✗") P=\(pinkyExtended ? "✓" : "✗") count=\(count)")
+            // Show index and pinky details (key for I LOVE YOU)
+            let iDist = distance(indexTip, wrist) / distance(indexPip, wrist)
+            let pDist = distance(pinkyTip, wrist) / distance(pinkyPip, wrist)
+            print("   I: tip.y=\(String(format: "%.3f", indexTip.y)) pip.y=\(String(format: "%.3f", indexPip.y)) ratio=\(String(format: "%.2f", iDist)) | P: tip.y=\(String(format: "%.3f", pinkyTip.y)) pip.y=\(String(format: "%.3f", pinkyPip.y)) ratio=\(String(format: "%.2f", pDist))")
+        }
+        
         return FingerStates(
             thumbExtended: thumbExtended,
             indexExtended: indexExtended,
@@ -323,23 +337,39 @@ final class MotionSignDetector {
         // For thumb, check horizontal extension
         if isThumb {
             let tipDist = abs(tip.x - wrist.x)
-            return tipDist > 0.06
+            return tipDist > 0.04
         }
         
-        // For fingers, tip should be further from wrist than PIP
         let tipToWrist = distance(tip, wrist)
         let pipToWrist = distance(pip, wrist)
         let mcpToWrist = distance(mcp, wrist)
         
-        // Pinky detection - balanced for accuracy
+        // CRITICAL: With Y inverted (1.0 - y), LOWER y = HIGHER position on screen
+        // Extended finger: tip.y < pip.y (tip is ABOVE pip)
+        // Curled finger: tip.y > pip.y (tip is BELOW pip)
+        
+        // Y-position check: tip above PIP indicates extension
+        let tipAbovePip = tip.y < pip.y  // Basic check: tip is above pip
+        let tipClearlyAbovePip = tip.y < pip.y - 0.015  // Stricter check
+        
+        // Distance check: tip farther from wrist than PIP
+        let distRatio = tipToWrist / pipToWrist
+        let distanceExtended = distRatio > 0.80  // Balanced threshold
+        
+        // For PINKY: more lenient (harder to detect)
         if isPinky {
-            let tipFartherThanMcp = tipToWrist > mcpToWrist * 0.85
-            let tipFartherThanPip = tipToWrist > pipToWrist * 0.85
-            return tipFartherThanMcp && tipFartherThanPip
+            let tipAboveMcp = tip.y < mcp.y
+            let pinkyDistOk = tipToWrist > mcpToWrist * 0.70 && tipToWrist > pipToWrist * 0.70
+            return (pinkyDistOk && tipAboveMcp) || (distanceExtended && tipAbovePip)
         }
         
-        // For other fingers, tip should be further from wrist than PIP
-        return tipToWrist > pipToWrist * 0.85
+        // BALANCED approach: Either (distance AND Y-position) OR (very clear distance)
+        // This catches both front camera perspectives and back camera perspectives
+        let clearlyExtended = distRatio > 0.90  // Very clear extension by distance alone
+        let normalExtended = distanceExtended && tipAbovePip  // Normal check
+        let yBasedExtended = tipClearlyAbovePip && distRatio > 0.75  // Y-based with loose distance
+        
+        return clearlyExtended || normalExtended || yBasedExtended
     }
     
     // MARK: - Motion Analysis Helpers
@@ -475,8 +505,8 @@ final class MotionSignDetector {
         // Must have index + middle, WITHOUT thumb
         let hasPeaceFingers = indexOut && middleOut && ringCurled && pinkyCurled && thumbCurled
         let extCount = frame.fingerStates.extendedCount
-        // Exactly 2 fingers (index + middle) - NOT 3
-        let correctCount = extCount == 2
+        // 2-3 fingers OK (thumb detection can be inconsistent)
+        let correctCount = extCount >= 2 && extCount <= 3
         
         // Method 2: Geometric detection for back camera / Meta Glasses
         // Peace sign has index and middle tips far from wrist, ring and pinky tips close to wrist
@@ -496,17 +526,22 @@ final class MotionSignDetector {
         let ringPinkyAvg = (ringToWrist + pinkyToWrist) / 2
         
         // Peace: index+middle extended (far), ring+pinky curled (close)
-        // Ratio should be > 1.2 (index+middle at least 20% farther than ring+pinky)
-        let hasGeometricPeace = indexMiddleAvg > ringPinkyAvg * 1.15
+        // Relaxed ratio for front camera compatibility
+        let hasGeometricPeace = indexMiddleAvg > ringPinkyAvg * 1.08  // Relaxed from 1.15
         
         // Also check that index and middle are close together (V shape)
         let indexMiddleDist = distance(indexTip, middleTip)
-        let indexMiddleClose = indexMiddleDist < indexToWrist * 0.5
+        let indexMiddleClose = indexMiddleDist < indexToWrist * 0.6  // Relaxed from 0.5
         
         // Method 3: Check that pinky is NOT spread (distinguishes from I LOVE YOU)
         let pinkyRingDist = distance(pinkyTip, ringTip)
         let middleRingDist = distance(middleTip, ringTip)
-        let pinkyNotSpread = pinkyRingDist < middleRingDist * 1.5
+        let pinkyNotSpread = pinkyRingDist < middleRingDist * 1.8  // Relaxed from 1.5
+        
+        // Debug logging for PEACE detection
+        if Int.random(in: 0..<30) == 0 {  // Log occasionally
+            print("✌️ PEACE check: fingers=\(hasPeaceFingers) geo=\(hasGeometricPeace) close=\(indexMiddleClose) pinkyOK=\(pinkyNotSpread) ratio=\(String(format: "%.2f", indexMiddleAvg/ringPinkyAvg))")
+        }
         
         // Return true if either method detects Peace (with pinky not spread check)
         let fingerStateMatch = hasPeaceFingers && correctCount
@@ -529,13 +564,14 @@ final class MotionSignDetector {
         
         // CRITICAL: Require LOW motion - static sign should not trigger during gestures
         let motion = getMotionMagnitude(frames: 8)
-        guard motion < 0.015 else { return nil }  // Must be nearly still
+        guard motion < 0.025 else { return nil }  // Relaxed from 0.015
         
-        // Check stability over recent frames (need 4 of last 6 frames to match)
+        // Check stability over recent frames (need 3 of last 6 frames to match)
         let recentFrames = Array(frameHistory.suffix(6))
         let peaceFrames = recentFrames.filter { isPeaceSign($0) }.count
         
-        if peaceFrames >= 4 {
+        if peaceFrames >= 3 {  // Relaxed from 4
+            print("✌️ PEACE DETECTED via MotionSignDetector")
             return MotionResult(sign: "PEACE", confidence: 0.90, isComplete: true)
         }
         
@@ -808,9 +844,9 @@ final class MotionSignDetector {
     /// I LOVE YOU: Thumb, index, and pinky extended (ILY hand shape)
     /// STATIC sign - requires hand to be still
     private func detectILoveYou(_ frame: HandFrame) -> MotionResult? {
-        // CRITICAL: Require LOW motion - static sign
+        // CRITICAL: Require LOW motion - static sign (relaxed for front camera)
         let motion = getMotionMagnitude(frames: 8)
-        guard motion < 0.015 else { return nil }
+        guard motion < 0.025 else { return nil }  // Relaxed from 0.015
         
         // Block if this is a Peace sign
         if isPeaceSign(frame) { return nil }
@@ -856,20 +892,27 @@ final class MotionSignDetector {
         // Additional check: middle finger should be closer to wrist than index (curled)
         let middleToWrist = distance(middleTip, wrist)
         let indexToWrist = distance(indexTip, wrist)
-        let middleIsCurled = middleToWrist < indexToWrist * 0.95
+        let middleIsCurled = middleToWrist < indexToWrist * 1.05  // Relaxed from 0.95 for front camera
         
         // Pinky is spread if it's far from ring AND pinky tip is far from wrist (extended outward)
         let pinkyToWrist = distance(pinkyTip, wrist)
         let ringToWrist = distance(ringTip, wrist)
-        let pinkySpread = pinkyRingDist > middleRingDist * 1.3 && pinkyToWrist > ringToWrist * 0.9
+        // Relaxed thresholds for front camera compatibility
+        let pinkySpread = pinkyRingDist > middleRingDist * 1.1 && pinkyToWrist > ringToWrist * 0.75  // Relaxed from 1.3, 0.9
         
         // Alternative ILY detection: thumb + index extended, middle/ring curled, pinky spread out
         // Added middleIsCurled geometric check to prevent Peace sign false positives
         let hasILYGeometry = thumbOut && indexOut && middleCurled && ringCurled && pinkySpread && middleIsCurled
         
+        // Debug logging for I LOVE YOU detection
+        if Int.random(in: 0..<30) == 0 {
+            print("🤟 ILY check: T=\(thumbOut) I=\(indexOut) M=\(!middleCurled) R=\(!ringCurled) P=\(pinkyOut) ext=\(extCount)")
+            print("   geometry: pinkySpread=\(pinkySpread) middleCurled=\(middleIsCurled) hasFingers=\(hasILYFingers) hasGeo=\(hasILYGeometry)")
+        }
+        
         if hasILYFingers || hasILYGeometry {
-            // Pinky should be spread from index
-            guard pinkyIndexDist > 0.04 else { return nil }
+            // Pinky should be spread from index (relaxed threshold)
+            guard pinkyIndexDist > 0.03 else { return nil }  // Relaxed from 0.04
             
             // Check stability over recent frames (relaxed to 2 frames)
             let recentFrames = Array(frameHistory.suffix(3))
@@ -893,12 +936,12 @@ final class MotionSignDetector {
                 // Geometric check: middle finger closer to wrist than index (curled)
                 let fMiddleToWrist = distance(fMiddleTip, fWrist)
                 let fIndexToWrist = distance(fIndexTip, fWrist)
-                let fMiddleIsCurled = fMiddleToWrist < fIndexToWrist * 0.95
+                let fMiddleIsCurled = fMiddleToWrist < fIndexToWrist * 1.05  // Relaxed for front camera
                 
                 // Stricter pinky spread check
                 let fPinkyToWrist = distance(fPinkyTip, fWrist)
                 let fRingToWrist = distance(fRingTip, fWrist)
-                let fPinkySpread = fPinkyRingDist > fMiddleRingDist * 1.3 && fPinkyToWrist > fRingToWrist * 0.9
+                let fPinkySpread = fPinkyRingDist > fMiddleRingDist * 1.1 && fPinkyToWrist > fRingToWrist * 0.75  // Relaxed
                 
                 let fHasILYFingers = f.fingerStates.thumbExtended && 
                                       f.fingerStates.indexExtended && 
