@@ -463,11 +463,14 @@ struct ContentView: View {
             }
             // Set initial camera source for ASL detector
             aslDetector.isUsingFrontCamera = (cameraManager.cameraSource == .iPhoneFront)
+            aslDetector.isUsingMetaGlasses = (cameraManager.cameraSource == .metaGlasses)
         }
         .onChange(of: cameraManager.cameraSource) { _, newSource in
             // Update ASL detector when camera source changes
             // Front camera needs coordinate mirroring, back camera does not
             aslDetector.isUsingFrontCamera = (newSource == .iPhoneFront)
+            // Meta Glasses mode uses stricter stabilization for better accuracy
+            aslDetector.isUsingMetaGlasses = (newSource == .metaGlasses)
         }
     }
     

@@ -35,8 +35,16 @@ final class ASLSignDetector: ObservableObject {
     /// Whether using front camera - used for image orientation handling
     var isUsingFrontCamera: Bool = true
     
+    /// Whether using Meta Glasses - requires stricter stabilization
+    var isUsingMetaGlasses: Bool = false
+    
     // Confidence threshold - unified with ASLModelClassifier (80%)
     static let confidenceThreshold: Float = 0.80
+    
+    // Meta Glasses specific thresholds (stricter for better accuracy)
+    private var metaGlassesStabilityThreshold: Int { 25 } // More frames for Meta Glasses
+    private var metaGlassesHoldDuration: TimeInterval { 2.0 } // Longer hold for Meta Glasses
+    private var metaGlassesTransitionCooldown: TimeInterval { 3.0 } // Longer cooldown
     
     // MARK: - Private Properties
     
@@ -49,6 +57,11 @@ final class ASLSignDetector: ObservableObject {
     private let stabilityThreshold: Int = 15 // Require 15 consecutive frames for consistent detection
     private var lastConfirmedTime: Date? // Track when last sign was confirmed
     private let transitionCooldown: TimeInterval = 2.0 // Wait 2 seconds after confirming before new sign
+    
+    // Meta Glasses specific state
+    private var metaGlassesStableSign: String? // Separate stabilization for Meta Glasses
+    private var metaGlassesStableCount: Int = 0
+    private var metaGlassesLastConfirmedTime: Date?
     
     // Speech cooldown to prevent rapid re-speaking of same sign
     private var lastSpokenSign: String?
@@ -106,12 +119,20 @@ final class ASLSignDetector: ObservableObject {
         
         // TRANSITION COOLDOWN: Prevent rapid sign changes during transitions
         let language = LanguageSettingsManager.shared.selectedLanguage
-        if let lastConfirmed = lastConfirmedTime {
+        
+        // Use stricter thresholds for Meta Glasses mode
+        let currentTransitionCooldown = isUsingMetaGlasses ? metaGlassesTransitionCooldown : transitionCooldown
+        let currentStabilityThreshold = isUsingMetaGlasses ? metaGlassesStabilityThreshold : stabilityThreshold
+        
+        // Check transition cooldown (use Meta Glasses specific time if applicable)
+        let cooldownTime = isUsingMetaGlasses ? metaGlassesLastConfirmedTime : lastConfirmedTime
+        if let lastConfirmed = cooldownTime {
             let timeSinceConfirm = Date().timeIntervalSince(lastConfirmed)
-            if timeSinceConfirm < transitionCooldown {
+            if timeSinceConfirm < currentTransitionCooldown {
                 // Still in cooldown - show waiting message (translated)
                 self.detectedSign = language.readyForNextSignMessage
-                print("⏳ TRANSITION COOLDOWN: \(String(format: "%.1f", transitionCooldown - timeSinceConfirm))s remaining")
+                let mode = isUsingMetaGlasses ? "META" : "PHONE"
+                print("⏳ [\(mode)] TRANSITION COOLDOWN: \(String(format: "%.1f", currentTransitionCooldown - timeSinceConfirm))s remaining")
                 return
             }
         }
@@ -180,29 +201,44 @@ final class ASLSignDetector: ObservableObject {
                     return
                 }
                 
-                // Apply confidence thresholds: >=80% normal (unified with classifier)
-                if result.confidence >= 0.80 {
-                    // High confidence - use stabilization
-                    if result.sign == stableSign {
-                        stableSignCount += 1
+                // Apply confidence thresholds: >=80% for phone, >=85% for Meta Glasses
+                let requiredConfidence: Float = isUsingMetaGlasses ? 0.85 : 0.80
+                if result.confidence >= requiredConfidence {
+                    // High confidence - use stabilization (separate tracking for Meta Glasses)
+                    if isUsingMetaGlasses {
+                        if result.sign == metaGlassesStableSign {
+                            metaGlassesStableCount += 1
+                        } else {
+                            metaGlassesStableSign = result.sign
+                            metaGlassesStableCount = 1
+                        }
                     } else {
-                        stableSign = result.sign
-                        stableSignCount = 1
+                        if result.sign == stableSign {
+                            stableSignCount += 1
+                        } else {
+                            stableSign = result.sign
+                            stableSignCount = 1
+                        }
                     }
                     
-                    // Only process if sign is stable (15+ consecutive frames)
-                    if stableSignCount >= stabilityThreshold {
+                    // Get current stable count based on mode
+                    let currentStableCount = isUsingMetaGlasses ? metaGlassesStableCount : stableSignCount
+                    
+                    // Only process if sign is stable (use appropriate threshold)
+                    if currentStableCount >= currentStabilityThreshold {
                         // Show the detected sign translated to user's language
                         let translatedSign = language.translatedPhrase(for: result.sign)
                         handleDetectedSign(result.sign, confidence: result.confidence)
                         self.detectedSign = translatedSign
-                        print("✅ ASL CONFIRMED: \(result.sign) → \(translatedSign) (confidence: \(String(format: "%.0f", result.confidence * 100))%)")
+                        let mode = isUsingMetaGlasses ? "META" : "PHONE"
+                        print("✅ [\(mode)] ASL CONFIRMED: \(result.sign) → \(translatedSign) (confidence: \(String(format: "%.0f", result.confidence * 100))%)")
                     } else {
                         // Show stabilizing message with detected sign (translated)
                         self.confidence = result.confidence
                         let translatedSign = language.translatedPhrase(for: result.sign)
                         self.detectedSign = "\(language.detectionInProgressMessage) (\(translatedSign))"
-                        print("🔄 ASL STABILIZING: \(result.sign) (\(stableSignCount)/\(stabilityThreshold) frames)")
+                        let mode = isUsingMetaGlasses ? "META" : "PHONE"
+                        print("🔄 [\(mode)] ASL STABILIZING: \(result.sign) (\(currentStableCount)/\(currentStabilityThreshold) frames)")
                     }
                     return
                 } else {
@@ -366,6 +402,17 @@ final class ASLSignDetector: ObservableObject {
         signHistory.removeAll()
         lastDetectedSign = nil
         signHoldStartTime = nil
+        
+        // Reset phone camera stabilization state
+        stableSign = nil
+        stableSignCount = 0
+        lastConfirmedTime = nil
+        
+        // Reset Meta Glasses stabilization state
+        metaGlassesStableSign = nil
+        metaGlassesStableCount = 0
+        metaGlassesLastConfirmedTime = nil
+        
         speechSynthesizer.stopSpeaking(at: .immediate)
         logger.info("ASL detector reset")
     }
@@ -429,12 +476,16 @@ final class ASLSignDetector: ObservableObject {
         // Notify motion detector of confirmation to trigger cooldown
         MotionSignDetector.shared.signConfirmed(sign)
         
-        // Set transition cooldown timestamp
-        lastConfirmedTime = Date()
-        
-        // Reset stabilization state
-        stableSign = nil
-        stableSignCount = 0
+        // Set transition cooldown timestamp (use appropriate one for mode)
+        if isUsingMetaGlasses {
+            metaGlassesLastConfirmedTime = Date()
+            metaGlassesStableSign = nil
+            metaGlassesStableCount = 0
+        } else {
+            lastConfirmedTime = Date()
+            stableSign = nil
+            stableSignCount = 0
+        }
         
         // Avoid adding the same sign twice in a row
         if signHistory.last != sign {
