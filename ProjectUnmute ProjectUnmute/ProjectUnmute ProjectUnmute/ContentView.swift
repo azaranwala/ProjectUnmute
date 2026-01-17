@@ -461,16 +461,21 @@ struct ContentView: View {
             if cameraManager.state != .streaming {
                 cameraManager.switchCamera(to: .iPhoneFront)
             }
-            // Set initial camera source for ASL detector
+            // Set initial camera source for ASL detector and MotionSignDetector
+            let isMetaGlasses = (cameraManager.cameraSource == .metaGlasses)
             aslDetector.isUsingFrontCamera = (cameraManager.cameraSource == .iPhoneFront)
-            aslDetector.isUsingMetaGlasses = (cameraManager.cameraSource == .metaGlasses)
+            aslDetector.isUsingMetaGlasses = isMetaGlasses
+            MotionSignDetector.shared.isUsingMetaGlasses = isMetaGlasses
         }
         .onChange(of: cameraManager.cameraSource) { _, newSource in
-            // Update ASL detector when camera source changes
+            // Update ASL detector and MotionSignDetector when camera source changes
+            let isMetaGlasses = (newSource == .metaGlasses)
             // Front camera needs coordinate mirroring, back camera does not
             aslDetector.isUsingFrontCamera = (newSource == .iPhoneFront)
             // Meta Glasses mode uses stricter stabilization for better accuracy
-            aslDetector.isUsingMetaGlasses = (newSource == .metaGlasses)
+            aslDetector.isUsingMetaGlasses = isMetaGlasses
+            // MotionSignDetector also needs adjusted thresholds for Meta Glasses
+            MotionSignDetector.shared.isUsingMetaGlasses = isMetaGlasses
         }
     }
     

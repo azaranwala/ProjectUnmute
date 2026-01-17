@@ -48,6 +48,9 @@ final class MotionSignDetector {
     private let maxHistoryFrames = 30  // ~1 second at 30fps
     private let minFramesForMotion = 5  // Minimum frames to detect motion
     
+    /// Whether using Meta Glasses - requires adjusted detection thresholds
+    var isUsingMetaGlasses: Bool = false
+    
     // Motion detection state
     private var currentMotionSign: String?
     private var motionStartTime: Date?
@@ -505,8 +508,9 @@ final class MotionSignDetector {
         // Must have index + middle, WITHOUT thumb
         let hasPeaceFingers = indexOut && middleOut && ringCurled && pinkyCurled && thumbCurled
         let extCount = frame.fingerStates.extendedCount
-        // 2-3 fingers OK (thumb detection can be inconsistent)
-        let correctCount = extCount >= 2 && extCount <= 3
+        // Meta Glasses: Allow 2-4 fingers (more relaxed thumb detection)
+        let maxCount = isUsingMetaGlasses ? 4 : 3
+        let correctCount = extCount >= 2 && extCount <= maxCount
         
         // Method 2: Geometric detection for back camera / Meta Glasses
         // Peace sign has index and middle tips far from wrist, ring and pinky tips close to wrist
@@ -526,21 +530,27 @@ final class MotionSignDetector {
         let ringPinkyAvg = (ringToWrist + pinkyToWrist) / 2
         
         // Peace: index+middle extended (far), ring+pinky curled (close)
-        // Relaxed ratio for front camera compatibility
-        let hasGeometricPeace = indexMiddleAvg > ringPinkyAvg * 1.08  // Relaxed from 1.15
+        // Meta Glasses: More relaxed ratio for first-person perspective
+        let geoRatio: Float = isUsingMetaGlasses ? 1.02 : 1.08
+        let hasGeometricPeace = indexMiddleAvg > ringPinkyAvg * geoRatio
         
         // Also check that index and middle are close together (V shape)
+        // Meta Glasses: More relaxed V-shape check
         let indexMiddleDist = distance(indexTip, middleTip)
-        let indexMiddleClose = indexMiddleDist < indexToWrist * 0.6  // Relaxed from 0.5
+        let vShapeRatio: Float = isUsingMetaGlasses ? 0.75 : 0.6
+        let indexMiddleClose = indexMiddleDist < indexToWrist * vShapeRatio
         
         // Method 3: Check that pinky is NOT spread (distinguishes from I LOVE YOU)
+        // Meta Glasses: More lenient pinky spread check
         let pinkyRingDist = distance(pinkyTip, ringTip)
         let middleRingDist = distance(middleTip, ringTip)
-        let pinkyNotSpread = pinkyRingDist < middleRingDist * 1.8  // Relaxed from 1.5
+        let pinkySpreadRatio: Float = isUsingMetaGlasses ? 2.2 : 1.8
+        let pinkyNotSpread = pinkyRingDist < middleRingDist * pinkySpreadRatio
         
         // Debug logging for PEACE detection
         if Int.random(in: 0..<30) == 0 {  // Log occasionally
-            print("✌️ PEACE check: fingers=\(hasPeaceFingers) geo=\(hasGeometricPeace) close=\(indexMiddleClose) pinkyOK=\(pinkyNotSpread) ratio=\(String(format: "%.2f", indexMiddleAvg/ringPinkyAvg))")
+            let mode = isUsingMetaGlasses ? "META" : "PHONE"
+            print("✌️ [\(mode)] PEACE check: fingers=\(hasPeaceFingers) geo=\(hasGeometricPeace) close=\(indexMiddleClose) pinkyOK=\(pinkyNotSpread) ratio=\(String(format: "%.2f", indexMiddleAvg/ringPinkyAvg))")
         }
         
         // Return true if either method detects Peace (with pinky not spread check)
@@ -562,16 +572,21 @@ final class MotionSignDetector {
         // Check if current frame is a Peace sign
         guard isPeaceSign(frame) else { return nil }
         
-        // CRITICAL: Require LOW motion - static sign should not trigger during gestures
+        // Meta Glasses: More relaxed motion threshold (first-person view has more natural motion)
+        let motionLimit: Float = isUsingMetaGlasses ? 0.04 : 0.025
         let motion = getMotionMagnitude(frames: 8)
-        guard motion < 0.025 else { return nil }  // Relaxed from 0.015
+        guard motion < motionLimit else { return nil }
         
-        // Check stability over recent frames (need 3 of last 6 frames to match)
-        let recentFrames = Array(frameHistory.suffix(6))
+        // Meta Glasses: Need fewer frames for stability (2 of 5 vs 3 of 6)
+        let historyCount = isUsingMetaGlasses ? 5 : 6
+        let requiredFrames = isUsingMetaGlasses ? 2 : 3
+        
+        let recentFrames = Array(frameHistory.suffix(historyCount))
         let peaceFrames = recentFrames.filter { isPeaceSign($0) }.count
         
-        if peaceFrames >= 3 {  // Relaxed from 4
-            print("✌️ PEACE DETECTED via MotionSignDetector")
+        if peaceFrames >= requiredFrames {
+            let mode = isUsingMetaGlasses ? "META" : "PHONE"
+            print("✌️ [\(mode)] PEACE DETECTED via MotionSignDetector")
             return MotionResult(sign: "PEACE", confidence: 0.90, isComplete: true)
         }
         
@@ -583,7 +598,9 @@ final class MotionSignDetector {
     private func isStopSign(_ frame: HandFrame) -> Bool {
         // STOP sign: All 5 fingers extended AND fingers close together (not spread)
         let extCount = frame.fingerStates.extendedCount
-        guard extCount >= 4 else { return false } // Need 4-5 fingers extended
+        // Meta Glasses: Accept 3+ fingers (first-person view may miss some)
+        let minFingers = isUsingMetaGlasses ? 3 : 4
+        guard extCount >= minFingers else { return false }
         
         // Get fingertip positions
         let indexTip = frame.landmarks[LM.indexTip]
@@ -599,11 +616,17 @@ final class MotionSignDetector {
         let pinkyToWrist = distance(pinkyTip, wrist)
         
         // Check fingers are all extended (similar distances from wrist)
+        // Meta Glasses: More relaxed thresholds for first-person perspective
         let avgDist = (indexToWrist + middleToWrist + ringToWrist + pinkyToWrist) / 4
-        let allExtended = indexToWrist > avgDist * 0.8 && 
-                          middleToWrist > avgDist * 0.8 && 
-                          ringToWrist > avgDist * 0.7 &&  // Ring/pinky slightly shorter OK
-                          pinkyToWrist > avgDist * 0.6
+        let indexThresh: Float = isUsingMetaGlasses ? 0.7 : 0.8
+        let middleThresh: Float = isUsingMetaGlasses ? 0.7 : 0.8
+        let ringThresh: Float = isUsingMetaGlasses ? 0.6 : 0.7
+        let pinkyThresh: Float = isUsingMetaGlasses ? 0.5 : 0.6
+        
+        let allExtended = indexToWrist > avgDist * indexThresh && 
+                          middleToWrist > avgDist * middleThresh && 
+                          ringToWrist > avgDist * ringThresh &&
+                          pinkyToWrist > avgDist * pinkyThresh
         
         // STOP sign has fingers TOGETHER (not spread like HELLO wave)
         // Check that adjacent fingers are close to each other
@@ -611,15 +634,18 @@ final class MotionSignDetector {
         let middleRingDist = distance(middleTip, ringTip)
         let ringPinkyDist = distance(ringTip, pinkyTip)
         
-        // Fingers should be close together (less than 30% of hand length)
+        // Meta Glasses: More relaxed finger spacing threshold
         let handLength = avgDist
-        let fingersTogether = indexMiddleDist < handLength * 0.35 &&
-                              middleRingDist < handLength * 0.35 &&
-                              ringPinkyDist < handLength * 0.35
+        let spacingThresh: Float = isUsingMetaGlasses ? 0.45 : 0.35
+        let fingersTogether = indexMiddleDist < handLength * spacingThresh &&
+                              middleRingDist < handLength * spacingThresh &&
+                              ringPinkyDist < handLength * spacingThresh
         
         // Also check hand is relatively still (STOP is a static hold, not waving)
+        // Meta Glasses: Allow more motion
         let recentMotion = getMotionMagnitude(frames: 5)
-        let isStill = recentMotion < 0.03  // Less motion than wave
+        let stillThresh: Float = isUsingMetaGlasses ? 0.05 : 0.03
+        let isStill = recentMotion < stillThresh
         
         return allExtended && fingersTogether && (isStill || extCount == 5)
     }
@@ -629,18 +655,24 @@ final class MotionSignDetector {
     private func detectStop(_ frame: HandFrame) -> MotionResult? {
         guard isStopSign(frame) else { return nil }
         
-        // CRITICAL: Require VERY LOW motion - static sign should not trigger during gestures
+        // Meta Glasses: More relaxed motion threshold (first-person view has more natural motion)
+        let motionLimit: Float = isUsingMetaGlasses ? 0.025 : 0.012
         let motion = getMotionMagnitude(frames: 8)
-        guard motion < 0.012 else { return nil }  // Must be very still
+        guard motion < motionLimit else { return nil }
         
         // Block if this looks like Peace or I Love You
         if isPeaceSign(frame) { return nil }
         
-        // Check stability over recent frames (need 4 of last 6 frames to match)
-        let recentFrames = Array(frameHistory.suffix(6))
+        // Meta Glasses: Need fewer frames for stability (3 of 5 vs 4 of 6)
+        let historyCount = isUsingMetaGlasses ? 5 : 6
+        let requiredFrames = isUsingMetaGlasses ? 3 : 4
+        
+        let recentFrames = Array(frameHistory.suffix(historyCount))
         let stopFrames = recentFrames.filter { isStopSign($0) }.count
         
-        if stopFrames >= 4 {
+        if stopFrames >= requiredFrames {
+            let mode = isUsingMetaGlasses ? "META" : "PHONE"
+            print("🛑 [\(mode)] STOP DETECTED via MotionSignDetector")
             return MotionResult(sign: "STOP", confidence: 0.88, isComplete: true)
         }
         
