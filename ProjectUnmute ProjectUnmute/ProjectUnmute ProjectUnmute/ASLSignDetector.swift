@@ -122,22 +122,22 @@ final class ASLSignDetector: ObservableObject {
         }
         
         // PRIORITY 2: Try ML classifier for static signs if enabled and loaded
-        // FILTER: Allow 30 supported signs (expanded vocabulary)
+        // FILTER: Only allow signs that can ACTUALLY be detected by ML model or MotionDetector
+        // ML Model classes: 0-5, HELLO, ILY, OK, PEACE, PLEASE, SORRY
+        // MotionDetector: YES, BYE, HELLO, THANK YOU, GOOD, PEACE, I LOVE YOU, STOP
         let allowedSigns: Set<String> = [
-            // Greetings & Social (6)
-            "HELLO", "GOODBYE", "THANK_YOU", "THANKYOU", "PLEASE", "SORRY",
-            // Responses (2)
-            "YES", "NO",
-            // Essential Actions (10)
-            "HELP", "STOP", "WANT", "NEED", "GO", "WAIT", "FINISH", "DONE", "EAT", "DRINK",
-            // Descriptions (4)
-            "GOOD", "BAD", "HOT", "COLD",
-            // Places (4)
-            "BATHROOM", "HOME", "SCHOOL", "WORK",
-            // Health & State (4)
-            "DOCTOR", "HURT", "HUNGRY", "TIRED",
-            // Keep original aliases for backwards compatibility
-            "THANK YOU", "BYE", "WATER"
+            // Numbers (from ML model)
+            "0", "1", "2", "3", "4", "5",
+            // Greetings (ML + Motion)
+            "HELLO", "BYE", "GOODBYE",
+            // Social (ML + Motion)
+            "PLEASE", "SORRY", "THANK_YOU", "THANKYOU", "THANK YOU", "OK",
+            // Responses (Motion)
+            "YES",
+            // Gestures (ML + Motion)
+            "PEACE", "ILY", "ILOVEYOU", "I LOVE YOU", "I_LOVE_YOU",
+            // Actions (Motion)
+            "STOP", "GOOD"
         ]
         
         if useMLClassifier && ASLModelClassifier.shared.isModelLoaded {

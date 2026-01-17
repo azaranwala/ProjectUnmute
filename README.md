@@ -163,74 +163,49 @@ open "ProjectUnmute ProjectUnmute.xcworkspace"
 ##  ASL Sign Recognition
 
 ### Overview
-The app uses a **hybrid detection system** combining motion-based detection, rule-based static sign detection, and ML classification. The system supports **30 ASL signs** optimized for reliable detection across all camera sources, with **multi-language output** (English, Spanish, Chinese).
+The app uses a **hybrid detection system** combining motion-based detection, rule-based static sign detection, and ML classification. The system supports **18 ASL signs** that can be reliably detected across all camera sources, with **multi-language output** (English, Spanish, Chinese).
 
 ---
 
-### 🎯 Supported ASL Signs (30 Signs)
+### 🎯 Supported ASL Signs (18 Signs)
 
-These 30 signs are specifically tuned for **consistent, non-overlapping detection** across iPhone Front Camera, Back Camera, and Meta Glasses.
+These signs are specifically tuned for **consistent, reliable detection** across iPhone Front Camera, Back Camera, and Meta Glasses.
+
+#### Numbers (6 signs) - ML Classifier
+| # | Sign | Detection Method | Confidence | Notes |
+|---|------|-----------------|------------|-------|
+| 1 | **0** | ML Classifier | 80% | Closed fist |
+| 2 | **1** | ML Classifier | 80% | Index finger up |
+| 3 | **2** | ML Classifier | 80% | Index + middle up |
+| 4 | **3** | ML Classifier | 80% | Thumb + index + middle |
+| 5 | **4** | ML Classifier | 80% | Four fingers up |
+| 6 | **5** | ML Classifier | 80% | Open hand |
 
 #### Greetings & Social (6 signs)
 | # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
 |---|------|-----------------|------------|---------|---------|--------|
-| 1 | **HELLO** | Motion + ML | 80-88% | Hello | Hola | 你好 |
-| 2 | **GOODBYE** | ML Classifier | 80% | Goodbye | Adiós | 再见 |
-| 3 | **THANK_YOU** | Motion + ML | 80-85% | Thank You | Gracias | 谢谢 |
-| 4 | **PLEASE** | Motion + ML | 80-85% | Please | Por favor | 请 |
-| 5 | **SORRY** | ML Classifier | 80% | Sorry | Lo siento | 对不起 |
-| 6 | **BYE** | Motion | 80-85% | Bye | Adiós | 再见 |
+| 7 | **HELLO** | Motion + ML | 80-88% | Hello | Hola | 你好 |
+| 8 | **BYE** | Motion | 80-85% | Bye | Adiós | 再见 |
+| 9 | **THANK YOU** | Motion | 80-85% | Thank You | Gracias | 谢谢 |
+| 10 | **PLEASE** | Motion + ML | 80-85% | Please | Por favor | 请 |
+| 11 | **SORRY** | ML Classifier | 80% | Sorry | Lo siento | 对不起 |
+| 12 | **OK** | ML Classifier | 80% | OK | OK | 好的 |
 
-#### Responses (2 signs)
+#### Responses & Actions (3 signs)
 | # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
 |---|------|-----------------|------------|---------|---------|--------|
-| 7 | **YES** | Motion + ML | 80-90% | Yes | Sí | 是 |
-| 8 | **NO** | ML Classifier | 80% | No | No | 不 |
+| 13 | **YES** | Motion | 80-90% | Yes | Sí | 是 |
+| 14 | **STOP** | Motion | 85-90% | Stop | Para | 停 |
+| 15 | **GOOD** | Motion | 85-92% | Good | Bueno | 好 |
 
-#### Essential Actions (10 signs)
+#### Gestures (3 signs)
 | # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
 |---|------|-----------------|------------|---------|---------|--------|
-| 9 | **HELP** | ML Classifier | 80% | Help | Ayuda | 帮助 |
-| 10 | **STOP** | Motion + ML | 85-90% | Stop | Para | 停 |
-| 11 | **WANT** | ML Classifier | 80% | Want | Quiero | 想要 |
-| 12 | **NEED** | ML Classifier | 80% | Need | Necesito | 需要 |
-| 13 | **GO** | ML Classifier | 80% | Go | Ve | 去 |
-| 14 | **WAIT** | ML Classifier | 80% | Wait | Espera | 等 |
-| 15 | **FINISH** | ML Classifier | 80% | Finish | Terminar | 完成 |
-| 16 | **DONE** | ML Classifier | 80% | Done | Hecho | 完成了 |
-| 17 | **EAT** | ML Classifier | 80% | Eat | Come | 吃 |
-| 18 | **DRINK** | ML Classifier | 80% | Drink | Bebe | 喝 |
+| 16 | **PEACE** | Motion (Static) | 85-90% | Peace | Paz | 和平 |
+| 17 | **I LOVE YOU** | Motion (Static) | 90-95% | I Love You | Te amo | 我爱你 |
+| 18 | **ILY** | ML Classifier | 80% | I Love You | Te amo | 我爱你 |
 
-#### Descriptions (4 signs)
-| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
-|---|------|-----------------|------------|---------|---------|--------|
-| 19 | **GOOD** | Motion + ML | 85-92% | Good | Bueno | 好 |
-| 20 | **BAD** | ML Classifier | 80% | Bad | Malo | 坏 |
-| 21 | **HOT** | ML Classifier | 80% | Hot | Caliente | 热 |
-| 22 | **COLD** | ML Classifier | 80% | Cold | Frío | 冷 |
-
-#### Places (4 signs)
-| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
-|---|------|-----------------|------------|---------|---------|--------|
-| 23 | **BATHROOM** | ML Classifier | 80% | Bathroom | Baño | 洗手间 |
-| 24 | **HOME** | ML Classifier | 80% | Home | Casa | 家 |
-| 25 | **SCHOOL** | ML Classifier | 80% | School | Escuela | 学校 |
-| 26 | **WORK** | ML Classifier | 80% | Work | Trabajo | 工作 |
-
-#### Health & State (4 signs)
-| # | Sign | Detection Method | Confidence | English | Spanish | Chinese |
-|---|------|-----------------|------------|---------|---------|--------|
-| 27 | **DOCTOR** | ML Classifier | 80% | Doctor | Doctor | 医生 |
-| 28 | **HURT** | ML Classifier | 80% | Hurt | Herido | 受伤 |
-| 29 | **HUNGRY** | ML Classifier | 80% | Hungry | Hambriento | 饿 |
-| 30 | **TIRED** | ML Classifier | 80% | Tired | Cansado | 累 |
-
-#### Additional Motion-Based Signs
-| Sign | Detection Method | Confidence | Notes |
-|------|-----------------|------------|-------|
-| **PEACE** | Static (Rule-based) | 85-90% | V-sign, thumb curled |
-| **I LOVE YOU** | Static (Rule-based) | 90-95% | Thumb + index + pinky (🤟) |
-| **WATER** | ML Classifier | 80% | W-hand near mouth |
+> **Note:** The ML model was trained on a limited dataset. Additional signs can be added by retraining the model with more data.
 
 ---
 
@@ -238,13 +213,10 @@ These 30 signs are specifically tuned for **consistent, non-overlapping detectio
 
 | Category | Signs | iPhone Front | iPhone Back | Meta Glasses |
 |----------|-------|:------------:|:-----------:|:------------:|
-| **Greetings** | HELLO, GOODBYE, THANK_YOU, PLEASE, SORRY, BYE | ✅ High | ✅ High | ✅ High |
-| **Responses** | YES, NO | ✅ High | ✅ High | ✅ High |
-| **Actions** | HELP, STOP, WANT, NEED, GO, WAIT, FINISH, DONE, EAT, DRINK | ✅ High | ✅ High | ✅ High |
-| **Descriptions** | GOOD, BAD, HOT, COLD | ✅ High | ✅ High | ✅ High |
-| **Places** | BATHROOM, HOME, SCHOOL, WORK | ✅ High | ✅ High | ✅ High |
-| **Health** | DOCTOR, HURT, HUNGRY, TIRED | ✅ High | ✅ High | ✅ High |
-| **Static** | PEACE, I LOVE YOU, WATER | ✅ High | ✅ High | ✅ High |
+| **Numbers** | 0, 1, 2, 3, 4, 5 | ✅ High | ✅ High | ✅ High |
+| **Greetings** | HELLO, BYE, THANK YOU, PLEASE, SORRY, OK | ✅ High | ✅ High | ✅ High |
+| **Actions** | YES, STOP, GOOD | ✅ High | ✅ High | ✅ High |
+| **Gestures** | PEACE, I LOVE YOU, ILY | ✅ High | ✅ High | ✅ High |
 
 **Detection Quality Summary:**
 | Camera Source | Quality | Best For |
@@ -267,26 +239,25 @@ These 30 signs are specifically tuned for **consistent, non-overlapping detectio
 │  │ MotionSignDetector  │    │  ASLModelClassifier │             │
 │  │ (Dynamic Signs)     │    │  (Static Signs)     │             │
 │  │                     │    │                     │             │
-│  │ • YES (fist pump)   │    │ • Centroid-based ML │             │
-│  │ • PLEASE (rub)      │    │ • 229 sign classes  │             │
-│  │ • BYE (wave)        │    │ • 80% threshold     │             │
-│  │ • HELLO (sweep)     │    │                     │             │
-│  │ • THANK YOU (chin)  │    │ Filtered to 9 signs:│             │
-│  │ • GOOD (thumbs up)  │    │ YES, PLEASE, GOOD,  │             │
-│  │                     │    │ PEACE, STOP, BYE,   │             │
-│  └─────────────────────┘    │ HELLO, THANK YOU,   │             │
-│           │                  │ I LOVE YOU          │             │
-│           │                  └─────────────────────┘             │
-│           ▼                            │                         │
-│  ┌─────────────────────────────────────┴───────────────────────┐│
+│  │ • YES (fist pump)   │    │ • ML model (13 cls) │             │
+│  │ • PLEASE (rub)      │    │ • 0-5, HELLO, ILY   │             │
+│  │ • BYE (wave)        │    │ • OK, PEACE, PLEASE │             │
+│  │ • HELLO (sweep)     │    │ • SORRY             │             │
+│  │ • THANK YOU (chin)  │    │                     │             │
+│  │ • GOOD (thumbs up)  │    │ Filtered to 18 signs│             │
+│  │ • PEACE (V-sign)    │    │ (ML + Motion)       │             │
+│  └─────────────────────┘    └─────────────────────┘             │
+│           │                            │                         │
+│           ▼                            ▼                         │
+│  ┌──────────────────────────────────────────────────────────┐│
 │  │                    Detection Pipeline                        ││
 │  │  1. Validate landmarks (filter noise)                        ││
 │  │  2. Check motion signs FIRST (priority)                      ││
-│  │  3. Check ML classifier (filtered to 9 signs)                ││
+│  │  3. Check ML classifier (filtered to 18 signs)               ││
 │  │  4. Apply 8-frame stabilization                              ││
 │  │  5. Apply 5-second transition cooldown                       ││
 │  │  6. Confirm and speak via TTS                                ││
-│  └──────────────────────────────────────────────────────────────┘│
+│  └──────────────────────────────────────────────────────────┐│
 └─────────────────────────────────────────────────────────────────┘
 ```
 

@@ -30,8 +30,8 @@ final class SpeechRecognitionManager: ObservableObject {
     /// Mapping of spoken words/phrases to avatar video filenames
     private var avatarVideoMap: [String: String] = [:]
     
-    /// Current language for speech recognition
-    private var currentLanguage: LanguagePreference = .english
+    /// Current language for speech recognition (nil on init to force first creation)
+    private var currentLanguage: LanguagePreference?
     
     /// Track if we've already logged error 1101 to prevent spam
     private var hasLogged1101Error = false
@@ -43,6 +43,10 @@ final class SpeechRecognitionManager: ObservableObject {
     /// Track if this is the first start (needs longer delay)
     private var isFirstStart = true
     
+    /// Prevent concurrent starts - use serial task to avoid race conditions
+    private var isStartingRecognition = false
+    private var startTask: Task<Void, Never>?
+    
     // MARK: - Initialization
     
     init() {
@@ -53,9 +57,32 @@ final class SpeechRecognitionManager: ObservableObject {
     /// Update the speech recognizer to use the currently selected language
     func updateRecognizerLanguage() {
         let language = LanguageSettingsManager.shared.selectedLanguage
+        
+        // Skip if language hasn't changed (but always create on first call when currentLanguage is nil)
+        if let current = currentLanguage, current == language {
+            logger.info("Language unchanged, skipping recognizer update")
+            return
+        }
+        
         currentLanguage = language
+        
+        // Reset retry count and error tracking for fresh start
+        retryCount = 0
+        hasLogged1101Error = false
+        isFirstStart = true  // Treat language switch like a fresh start
+        
+        // Create new speech recognizer for the selected language
         speechRecognizer = SFSpeechRecognizer(locale: language.speechRecognitionLocale)
-        logger.info("Updated speech recognizer to language: \(language.displayName)")
+        
+        // Verify the recognizer supports the language
+        if let recognizer = speechRecognizer {
+            logger.info("Updated speech recognizer to language: \(language.displayName) (available: \(recognizer.isAvailable))")
+            if !recognizer.isAvailable {
+                logger.warning("Speech recognition for \(language.displayName) may require downloading language pack")
+            }
+        } else {
+            logger.error("Failed to create speech recognizer for \(language.displayName)")
+        }
     }
     
     // MARK: - Avatar Assets
@@ -114,6 +141,8 @@ final class SpeechRecognitionManager: ObservableObject {
         let language = LanguageSettingsManager.shared.selectedLanguage
         let englishWord = language.toEnglish(from: lowercased)
         
+        logger.info("Looking up video for '\(lowercased)' -> English: '\(englishWord)' (language: \(language.displayName))")
+        
         // Direct match with English word (EXACT match only)
         if let filename = avatarVideoMap[englishWord] {
             logger.info("Found exact match for '\(englishWord)' -> \(filename)")
@@ -137,6 +166,20 @@ final class SpeechRecognitionManager: ObservableObject {
         
         if let filename = avatarVideoMap[withUnderscores] {
             logger.info("Found match with underscores for '\(withUnderscores)' -> \(filename)")
+            return filename
+        }
+        
+        // Try English translation with spaces/underscores variations
+        let englishWithSpaces = englishWord.replacingOccurrences(of: "_", with: " ")
+        let englishWithUnderscores = englishWord.replacingOccurrences(of: " ", with: "_")
+        
+        if let filename = avatarVideoMap[englishWithSpaces] {
+            logger.info("Found match for English with spaces '\(englishWithSpaces)' -> \(filename)")
+            return filename
+        }
+        
+        if let filename = avatarVideoMap[englishWithUnderscores] {
+            logger.info("Found match for English with underscores '\(englishWithUnderscores)' -> \(filename)")
             return filename
         }
         
@@ -204,17 +247,29 @@ final class SpeechRecognitionManager: ObservableObject {
     
     /// Start listening for speech
     func startListening() async {
-        guard !isListening else { return }
+        // Cancel any pending start task to prevent duplicates
+        startTask?.cancel()
+        
+        // Prevent concurrent starts - this is the key guard
+        guard !isListening && !isStartingRecognition else {
+            logger.info("Skipping startListening - already listening or starting (isListening: \(self.isListening), isStarting: \(self.isStartingRecognition))")
+            return
+        }
+        
+        // Set flag immediately before any async work
+        isStartingRecognition = true
+        defer { isStartingRecognition = false }
         
         // Reset error tracking
         hasLogged1101Error = false
+        error = nil  // Clear any previous errors
         
-        // On first start, add a longer delay to let the system initialize
+        // On first start, add a shorter delay to let the system initialize
         if isFirstStart {
             isFirstStart = false
             retryCount = 0  // Reset retry count on first start
             logger.info("First start - waiting for system to initialize...")
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay on first start
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay on first start
         }
         
         // Check if running in simulator or Mac - audio engine has compatibility issues
@@ -255,6 +310,10 @@ final class SpeechRecognitionManager: ObservableObject {
     
     /// Stop listening for speech
     func stopListening() {
+        // Only proceed if we were actually listening
+        let wasListening = isListening
+        isListening = false
+        
         // Stop audio engine first
         if audioEngine.isRunning {
             audioEngine.stop()
@@ -270,20 +329,25 @@ final class SpeechRecognitionManager: ObservableObject {
         
         recognitionRequest = nil
         recognitionTask = nil
-        isListening = false
         
-        // Deactivate audio session on iOS
+        // Only deactivate audio session if we were actually listening
+        // This prevents the "Session deactivation failed" error
         #if !targetEnvironment(macCatalyst)
-        if !ProcessInfo.processInfo.isiOSAppOnMac {
-            do {
-                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            } catch {
-                logger.warning("Failed to deactivate audio session: \(error.localizedDescription)")
+        if wasListening && !ProcessInfo.processInfo.isiOSAppOnMac {
+            // Delay deactivation slightly to let audio engine fully stop
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                do {
+                    try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                } catch {
+                    // Silently ignore deactivation errors - not critical
+                }
             }
         }
         #endif
         
-        logger.info("Stopped speech recognition")
+        if wasListening {
+            logger.info("Stopped speech recognition")
+        }
     }
     
     private func startRecognition() async throws {
@@ -299,21 +363,21 @@ final class SpeechRecognitionManager: ObservableObject {
             let audioSession = AVAudioSession.sharedInstance()
             
             do {
-                // First deactivate to reset state
+                // First deactivate to reset state completely
                 try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
                 
-                // Small delay to let audio system settle
-                try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                // Longer delay to let audio system fully reset
+                try await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
                 
-                // Configure for speech recognition - use .default mode instead of .measurement
-                // .measurement mode can cause issues on some devices
-                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.allowBluetooth, .defaultToSpeaker, .mixWithOthers])
+                // Configure for speech recognition AND video playback
+                // Use .playAndRecord to allow both mic input and video audio output
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
                 try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
                 
-                // Another small delay after activation
-                try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                // Another delay after activation
+                try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
                 
-                logger.info("Audio session configured successfully")
+                logger.info("Audio session configured for speech recognition + video playback (mode: playAndRecord)")
             } catch {
                 logger.error("Audio session configuration failed: \(error.localizedDescription)")
                 throw SpeechError.audioEngineError
@@ -334,18 +398,21 @@ final class SpeechRecognitionManager: ObservableObject {
         recognitionRequest.addsPunctuation = false  // Reduce processing overhead
         recognitionRequest.taskHint = .dictation    // Optimize for dictation
         
-        // Use on-device recognition (user preference)
+        // IMPORTANT: Do NOT require on-device recognition
+        // Error 1101 occurs when on-device recognition fails to start
+        // Allow the system to use server-based recognition as fallback
+        recognitionRequest.requiresOnDeviceRecognition = false
+        
         if speechRecognizer?.supportsOnDeviceRecognition == true {
-            recognitionRequest.requiresOnDeviceRecognition = true
-            logger.info("Using on-device speech recognition")
+            logger.info("On-device recognition available (but not required - allows server fallback)")
         } else {
-            // Fall back to server only if on-device not available at all
-            recognitionRequest.requiresOnDeviceRecognition = false
-            logger.warning("On-device recognition not available, falling back to server")
+            logger.info("Using server-based speech recognition")
         }
         
-        // Get input node
+        // Get input node and remove any existing tap to prevent crash
         let inputNode = audioEngine.inputNode
+        inputNode.removeTap(onBus: 0)  // Remove existing tap if any - prevents "nullptr == Tap()" crash
+        
         let recordingFormat: AVAudioFormat
         
         // On Mac, we might need to use a different format
@@ -409,34 +476,13 @@ final class SpeechRecognitionManager: ObservableObject {
                     // Recognition was cancelled, not an error
                     return
                 case 1101:
-                    // Speech recognition service unavailable or failed to start
-                    // This can happen when the service is busy or unavailable
-                    // Try to restart recognition if we haven't exceeded retries
-                    let currentRetry = self.retryCount
-                    let maxRetryCount = self.maxRetries
-                    
-                    if currentRetry < maxRetryCount {
-                        self.retryCount += 1
-                        let delaySeconds = Double(self.retryCount) * 0.5 // Increasing delay: 0.5s, 1s, 1.5s, etc.
-                        if !self.hasLogged1101Error {
-                            self.hasLogged1101Error = true
-                            logger.warning("Speech recognition error (1101). Retry \(self.retryCount)/\(maxRetryCount) in \(delaySeconds)s...")
-                        }
-                        
-                        Task { @MainActor in
-                            self.stopListening()
-                            // Wait with increasing delay before retrying
-                            try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
-                            self.hasLogged1101Error = false // Reset so we can log next retry
-                            await self.startListening()
-                        }
-                    } else {
-                        if !self.hasLogged1101Error {
-                            self.hasLogged1101Error = true
-                            logger.error("Speech recognition failed after \(maxRetryCount) retries")
-                            self.stopListening()
-                            self.error = "Speech recognition unavailable. Please check your internet connection and try again."
-                        }
+                    // Speech recognition service unavailable - show helpful error
+                    // Don't spam retries - just show the error once
+                    if !self.hasLogged1101Error {
+                        self.hasLogged1101Error = true
+                        logger.error("Speech recognition error 1101 - service unavailable")
+                        self.stopListening()
+                        self.error = "🎤 Speech recognition unavailable. Please try:\n• Enable Dictation in Settings → General → Keyboard\n• Check internet connection\n• Restart the app\n\nUse Demo Mode buttons to test videos."
                     }
                     return
                 case 1107:

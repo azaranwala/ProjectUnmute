@@ -13,6 +13,7 @@ struct AvatarVideoPlayer: View {
     @State private var isPlaying = false
     @State private var playerObserver: NSKeyValueObservation?
     @State private var loopObserver: NSObjectProtocol?
+    @State private var currentlyLoadedVideo: String?  // Track which video is loaded to prevent duplicate loads
     
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProjectUnmute", category: "AvatarPlayer")
     
@@ -111,6 +112,12 @@ struct AvatarVideoPlayer: View {
     }
     
     private func loadVideo(named name: String?) {
+        // Skip if already loading/loaded this video
+        if let name = name, name == currentlyLoadedVideo && player != nil {
+            logger.info("Video '\(name)' already loaded, skipping duplicate load")
+            return
+        }
+        
         // Clean up previous observers to prevent memory leaks
         playerObserver?.invalidate()
         playerObserver = nil
@@ -123,8 +130,12 @@ struct AvatarVideoPlayer: View {
             player?.pause()
             player = nil
             isPlaying = false
+            currentlyLoadedVideo = nil
             return
         }
+        
+        // Mark this video as being loaded
+        currentlyLoadedVideo = name
         
         // Try to find video in AvatarAssets folder
         let videoExtensions = ["mp4", "mov", "m4v"]
@@ -196,51 +207,61 @@ struct AvatarVideoPlayer: View {
         if let url = videoURL {
             logger.info("Loading avatar video: \(url.lastPathComponent)")
             
-            // Create player item first
-            let playerItem = AVPlayerItem(url: url)
-            let newPlayer = AVPlayer(playerItem: playerItem)
-            newPlayer.actionAtItemEnd = .none
-            
-            // Stop any existing player first
+            // Stop and release any existing player FIRST
             player?.pause()
+            player?.replaceCurrentItem(with: nil)
+            player = nil
             
-            // Set the new player immediately so UI updates
-            player = newPlayer
-            
-            // Wait for player item to be ready before playing
-            playerObserver = playerItem.observe(\.status, options: [.new, .initial]) { item, _ in
-                DispatchQueue.main.async { [self] in
-                    switch item.status {
-                    case .readyToPlay:
-                        logger.info("Player ready - starting playback for: \(url.lastPathComponent)")
-                        newPlayer.seek(to: .zero)
-                        newPlayer.play()
-                        isPlaying = true
-                    case .failed:
-                        logger.error("Player failed to load: \(item.error?.localizedDescription ?? "unknown error")")
-                        isPlaying = false
-                    case .unknown:
-                        logger.info("Player status unknown, waiting...")
-                    @unknown default:
-                        break
+            // Small delay to allow cleanup
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [self] in
+                // Create player item
+                let playerItem = AVPlayerItem(url: url)
+                let newPlayer = AVPlayer(playerItem: playerItem)
+                newPlayer.actionAtItemEnd = .none
+                
+                // Set the new player so UI updates
+                player = newPlayer
+                
+                // Wait for player item to be ready before playing
+                playerObserver = playerItem.observe(\.status, options: [.new, .initial]) { item, _ in
+                    DispatchQueue.main.async { [self] in
+                        switch item.status {
+                        case .readyToPlay:
+                            logger.info("Player ready - starting playback for: \(url.lastPathComponent)")
+                            newPlayer.seek(to: .zero)
+                            newPlayer.play()
+                            isPlaying = true
+                        case .failed:
+                            logger.error("Player failed to load: \(item.error?.localizedDescription ?? "unknown error")")
+                            isPlaying = false
+                            // Reset state on failure
+                            currentlyLoadedVideo = nil
+                        case .unknown:
+                            logger.info("Player status unknown, waiting...")
+                        @unknown default:
+                            break
+                        }
                     }
                 }
-            }
-            
-            // Loop the video - store observer for cleanup
-            loopObserver = NotificationCenter.default.addObserver(
-                forName: .AVPlayerItemDidPlayToEndTime,
-                object: playerItem,
-                queue: .main
-            ) { _ in
-                newPlayer.seek(to: .zero)
-                newPlayer.play()
-            }
-            
-            // Also try to play immediately in case it's already ready
-            if playerItem.status == .readyToPlay {
-                newPlayer.play()
-                isPlaying = true
+                
+                // Loop the video - store observer for cleanup
+                loopObserver = NotificationCenter.default.addObserver(
+                    forName: .AVPlayerItemDidPlayToEndTime,
+                    object: playerItem,
+                    queue: .main
+                ) { _ in
+                    newPlayer.seek(to: .zero)
+                    newPlayer.play()
+                }
+                
+                // Fallback: try to play after a short delay in case status observer doesn't fire
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [self] in
+                    if player === newPlayer && !isPlaying {
+                        logger.info("Fallback: forcing playback for: \(url.lastPathComponent)")
+                        newPlayer.play()
+                        isPlaying = true
+                    }
+                }
             }
         } else {
             logger.warning("Avatar video not found: \(name)")

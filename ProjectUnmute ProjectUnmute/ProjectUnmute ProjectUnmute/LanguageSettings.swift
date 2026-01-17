@@ -72,9 +72,38 @@ enum LanguagePreference: String, CaseIterable, Identifiable {
         case .spanish:
             // Reverse lookup: find English word that maps to this Spanish word
             for (english, spanish) in spanishTranslations {
-                if spanish.lowercased() == word {
+                // Case-insensitive comparison and handle accent variations
+                let normalizedSpanish = spanish.lowercased()
+                let normalizedWord = word.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+                let normalizedSpanishNoAccent = normalizedSpanish.folding(options: .diacriticInsensitive, locale: .current)
+                
+                if normalizedSpanish == word || normalizedSpanishNoAccent == normalizedWord {
                     return english
                 }
+            }
+            // Also check common speech recognition variations
+            let spanishVariations: [String: String] = [
+                "si": "yes", "sí": "yes",
+                "adios": "bye", "adiós": "bye",
+                "hola": "hello",
+                "gracias": "thank you",
+                "por favor": "please",
+                "bueno": "good", "bien": "good",
+                "malo": "bad",
+                "ayuda": "help",
+                "para": "stop", "parar": "stop",
+                "agua": "water",
+                "casa": "home",
+                "escuela": "school",
+                "baño": "bathroom", "bano": "bathroom",
+                "doctor": "doctor",
+                "hambre": "hungry", "hambriento": "hungry",
+                "cansado": "tired",
+                "caliente": "hot",
+                "frio": "cold", "frío": "cold"
+            ]
+            if let english = spanishVariations[word] {
+                return english
             }
             return word  // Return as-is if not found
             
@@ -84,6 +113,31 @@ enum LanguagePreference: String, CaseIterable, Identifiable {
                 if mandarin == word {
                     return english
                 }
+            }
+            // Also check common Mandarin speech recognition variations
+            let mandarinVariations: [String: String] = [
+                "你好": "hello", "嗨": "hello",
+                "再见": "bye", "再見": "bye",
+                "谢谢": "thank you", "謝謝": "thank you",
+                "是": "yes", "是的": "yes",
+                "不": "no", "不是": "no",
+                "请": "please", "請": "please",
+                "好": "good", "好的": "good",
+                "坏": "bad", "壞": "bad",
+                "帮助": "help", "幫助": "help",
+                "停": "stop", "停止": "stop",
+                "水": "water",
+                "家": "home",
+                "学校": "school", "學校": "school",
+                "洗手间": "bathroom", "洗手間": "bathroom", "厕所": "bathroom",
+                "医生": "doctor", "醫生": "doctor",
+                "饿": "hungry", "餓": "hungry",
+                "累": "tired",
+                "热": "hot", "熱": "hot",
+                "冷": "cold"
+            ]
+            if let english = mandarinVariations[word] {
+                return english
             }
             return word  // Return as-is if not found
         }

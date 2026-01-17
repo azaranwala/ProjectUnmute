@@ -78,8 +78,10 @@ struct ContentView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                // Only show Speech demo controls in Speech → ASL mode
-                if demoController.showDemoControls && communicationMode == .speechToASL {
+                // Show Speech demo controls in Speech → ASL mode when:
+                // 1. Demo controls are enabled, OR
+                // 2. User is muted (not listening) - so they can still interact with demo words
+                if communicationMode == .speechToASL && (demoController.showDemoControls || !speechManager.isListening) {
                     DemoControlPanel(
                         speechManager: speechManager,
                         avatarManager: avatarManager,
@@ -117,12 +119,19 @@ struct ContentView: View {
             }
             .onChange(of: languageSettings.selectedLanguage) { _, newLanguage in
                 // Restart speech recognition with new language
+                // Must properly stop, wait, update, and restart to avoid error 1101
                 let wasListening = speechManager.isListening
                 speechManager.stopListening()
-                speechManager.updateRecognizerLanguage()
                 speechManager.clearTranscription()
+                
+                // Update recognizer after stopping
+                speechManager.updateRecognizerLanguage()
+                
                 if wasListening {
                     Task {
+                        // Wait for audio engine to fully stop before restarting
+                        // This prevents the "kAFAssistantErrorDomain Code=1101" error
+                        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
                         await speechManager.startListening()
                     }
                 }
