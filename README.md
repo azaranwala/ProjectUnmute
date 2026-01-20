@@ -27,6 +27,10 @@
 
 ##  Demo
 
+[![App Demo Video](https://img.youtube.com/vi/kL8WR2BcHiY/0.jpg)](https://youtu.be/kL8WR2BcHiY)
+
+**▶️ [Watch the App Demo Video](https://youtu.be/kL8WR2BcHiY)**
+
 | Speech → ASL | ASL → Text |
 |:------------:|:----------:|
 | Speak naturally, see ASL avatar | Sign in ASL, see text translation |
